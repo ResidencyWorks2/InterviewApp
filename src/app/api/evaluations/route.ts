@@ -7,11 +7,13 @@ import { PhiScrubber } from "@/shared/security/phi-scrubber";
 const SaveEvaluationSchema = z.object({
 	id: z.uuid().optional(),
 	user_id: z.uuid().optional(),
+	question_id: z.string().min(1), // REQUIRED: question_id is critical for stats
 	content_pack_id: z.uuid().optional().nullable(),
 	response_text: z.string().optional(),
 	response_audio_url: z.url().optional(),
 	response_type: z.enum(["text", "audio"]),
 	duration_seconds: z.number().int().min(0).optional(),
+	duration_ms: z.number().int().min(0).optional(), // Also accept duration_ms
 	word_count: z.number().int().min(0).optional(),
 	wpm: z.number().min(0).optional(),
 	categories: z.record(z.string(), z.number()),
@@ -57,6 +59,13 @@ export async function POST(request: NextRequest) {
 			| "COMPLETED"
 			| "FAILED";
 
+		// Convert duration_seconds to duration_ms if needed
+		const durationMs = payload.duration_ms
+			? payload.duration_ms
+			: payload.duration_seconds
+				? payload.duration_seconds * 1000
+				: undefined;
+
 		// Scrub PHI from response_text before database insert
 		const scrubbedResponseText = payload.response_text
 			? PhiScrubber.scrubUserInput(payload.response_text)
@@ -67,11 +76,13 @@ export async function POST(request: NextRequest) {
 		const insertPayload = {
 			id: payload.id,
 			user_id: payload.user_id || user.id,
+			question_id: payload.question_id, // CRITICAL: Required for stats calculation
 			content_pack_id: payload.content_pack_id ?? null,
 			response_text: scrubbedResponseText,
 			response_audio_url: payload.response_audio_url,
 			response_type: payload.response_type,
 			duration_seconds: payload.duration_seconds ?? null,
+			duration_ms: durationMs ?? null,
 			word_count: payload.word_count ?? null,
 			wpm: payload.wpm ?? null,
 			categories: payload.categories,

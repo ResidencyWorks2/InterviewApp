@@ -369,35 +369,7 @@ curl -X GET 'http://localhost:3000/api/questions?specialty=pediatrics'
 
 ---
 
-### 2.3 Micro-Checklists
-
-| Feature | Test Case | Expected Result | Status |
-|---------|-----------|----------------|--------|
-| Checklist Modal | Opens from chip/trigger | Modal displays | 🔄 |
-| Checklist Items | User can check off items | State persists | 🔄 |
-| Export | Completed items in Playbook | Export includes checklist | 🔄 |
-| Schema | Tables for templates + completions | Database tables exist | 🔄 |
-
-**Testing Instructions:**
-```bash
-# 1. Check database schema
-# Run in Supabase SQL editor:
-SELECT table_name
-FROM information_schema.tables
-WHERE table_name IN ('checklist_templates', 'checklist_completions');
-
-# 2. Test modal
-# - Click on category chip
-# - Verify checklist modal opens
-# - Check off items
-# - Close and reopen modal
-# - Verify checked items persist
-
-# 3. Test export
-# - Complete checklist items
-# - Export Playbook
-# - Verify completed items appear in export
-```
+proje
 
 **Status**: 🔄 Requires implementation
 

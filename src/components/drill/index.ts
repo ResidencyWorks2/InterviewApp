@@ -7,6 +7,8 @@
 export type { EvaluationResult } from "@/types/evaluation";
 export type { AudioRecorderProps } from "./AudioRecorder";
 export { AudioRecorder } from "./AudioRecorder";
+export type { ChecklistItem, ChecklistModalProps } from "./ChecklistModal";
+export { ChecklistModal } from "./ChecklistModal";
 export { ChipsStream } from "./ChipsStream";
 export type { EvaluationResultDisplayProps } from "./EvaluationResultDisplay";
 export { EvaluationResultDisplay } from "./EvaluationResultDisplay";

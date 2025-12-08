@@ -14,6 +14,71 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			checklist_completions: {
+				Row: {
+					completed_at: string;
+					created_at: string;
+					evaluation_id: string;
+					id: string;
+					template_id: string;
+					user_id: string;
+				};
+				Insert: {
+					completed_at?: string;
+					created_at?: string;
+					evaluation_id: string;
+					id?: string;
+					template_id: string;
+					user_id: string;
+				};
+				Update: {
+					completed_at?: string;
+					created_at?: string;
+					evaluation_id?: string;
+					id?: string;
+					template_id?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "checklist_completions_template_id_fkey";
+						columns: ["template_id"];
+						isOneToOne: false;
+						referencedRelation: "checklist_templates";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			checklist_templates: {
+				Row: {
+					category: string;
+					created_at: string;
+					display_order: number;
+					id: string;
+					is_active: boolean;
+					item_text: string;
+					updated_at: string;
+				};
+				Insert: {
+					category: string;
+					created_at?: string;
+					display_order?: number;
+					id?: string;
+					is_active?: boolean;
+					item_text: string;
+					updated_at?: string;
+				};
+				Update: {
+					category?: string;
+					created_at?: string;
+					display_order?: number;
+					id?: string;
+					is_active?: boolean;
+					item_text?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
 			content_packs: {
 				Row: {
 					activated_at: string | null;
@@ -186,6 +251,7 @@ export type Database = {
 				Row: {
 					content_pack_id: string | null;
 					created_at: string;
+					delivery_note: string | null;
 					duration_ms: number;
 					feedback: string;
 					job_id: string;
@@ -205,6 +271,7 @@ export type Database = {
 				Insert: {
 					content_pack_id?: string | null;
 					created_at?: string;
+					delivery_note?: string | null;
 					duration_ms: number;
 					feedback: string;
 					job_id: string;
@@ -224,6 +291,7 @@ export type Database = {
 				Update: {
 					content_pack_id?: string | null;
 					created_at?: string;
+					delivery_note?: string | null;
 					duration_ms?: number;
 					feedback?: string;
 					job_id?: string;
@@ -901,6 +969,17 @@ export type Database = {
 					validated_by: string;
 					validation_time_ms: number;
 					warnings: Json;
+				}[];
+			};
+			get_questions_by_specialty: {
+				Args: { limit_count?: number; target_specialty: string };
+				Returns: {
+					evaluation_id: string;
+					evaluation_title: string;
+					question_id: string;
+					question_specialty: string;
+					question_text: string;
+					question_type: string;
 				}[];
 			};
 			get_system_health_summary: { Args: never; Returns: Json };

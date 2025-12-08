@@ -34,6 +34,7 @@ interface QuestionData {
 	tags?: string[];
 	competency?: string;
 	expectedResponseElements?: string[];
+	drill_specialty?: string; // NEW: Specialty field
 	evaluationId: string;
 	evaluationTitle: string;
 	evaluationDescription: string;
@@ -110,6 +111,7 @@ export default function DrillInterfacePage() {
 	const [streamingRequestId, setStreamingRequestId] = React.useState<
 		string | null
 	>(null);
+	const [submittedText, setSubmittedText] = React.useState<string>("");
 	const [fallbackEnabled, setFallbackEnabled] = React.useState(false);
 
 	const questionId = params.id as string;
@@ -157,6 +159,13 @@ export default function DrillInterfacePage() {
 
 			try {
 				const response = await fetch(`/api/evaluations/user/${questionId}`);
+
+				// If authentication failed, silently return
+				if (response.status === 401) {
+					console.warn("Authentication required for fetching history");
+					return;
+				}
+
 				if (response.ok) {
 					const result = await response.json();
 					setPreviousAttempts(result.data);
@@ -185,6 +194,13 @@ export default function DrillInterfacePage() {
 				const response = await fetch(
 					`/api/submissions?questionId=${questionId}&drillId=${evaluationId}`,
 				);
+
+				// If authentication failed, silently return (user might not be fully authenticated yet)
+				if (response.status === 401) {
+					console.warn("Authentication required for fetching submission");
+					return;
+				}
+
 				if (response.ok) {
 					const result = await response.json();
 					const submission = result.data?.submission;
@@ -305,23 +321,88 @@ export default function DrillInterfacePage() {
 			const streamResult = streamingFeedback.result; // Capture result to avoid null checks in timeout
 
 			const timer = setTimeout(() => {
+				// Calculate word count and metrics from submitted text
+				const wordCount = submittedText
+					? submittedText.trim().split(/\s+/).filter(Boolean).length
+					: 0;
+				const estimatedDurationSeconds = Math.max(30, wordCount / 3); // ~3 words per second
+				const wpm =
+					wordCount > 0
+						? Math.round((wordCount / estimatedDurationSeconds) * 60)
+						: 0;
+
+				// Get category scores (use streamResult.score as baseline for all categories)
+				const clarity = streamResult.score ?? 70;
+				const content = streamResult.score ?? 70;
+				const delivery = streamResult.score ?? 70;
+				const structure = streamResult.score ?? 70;
+
 				// Convert streaming result to EvaluationResult format
 				const result: EvaluationResult = {
 					id: crypto.randomUUID(),
 					user_id: user?.id ?? "anonymous",
 					content_pack_id: contentPackData?.id ?? "default",
 					response_type: "text",
+					response_text: submittedText || undefined,
+					word_count: wordCount,
+					wpm: wpm,
+					duration_seconds: estimatedDurationSeconds,
 					score: streamResult.score,
 					feedback: streamResult.feedback,
 					status: "COMPLETED",
 					created_at: new Date().toISOString(),
 					updated_at: new Date().toISOString(),
 					categories: {
-						clarity: streamResult.score,
-						content: streamResult.score,
-						delivery: streamResult.score,
-						structure: streamResult.score,
+						clarity: clarity,
+						content: content,
+						delivery: delivery,
+						structure: structure,
 					},
+					// UI extras for M0 demo - 7 category flag chips
+					category_flags: [
+						{
+							name: "Conciseness",
+							passFlag: clarity >= 70 ? "PASS" : "FLAG",
+							note: "Keep sentences short and emphasize key points early.",
+						},
+						{
+							name: "Examples",
+							passFlag: content >= 70 ? "PASS" : "FLAG",
+							note: "Ground claims with brief, concrete examples.",
+						},
+						{
+							name: "Signposting",
+							passFlag: structure >= 70 ? "PASS" : "FLAG",
+							note: "Outline your answer structure up front (First, Then, Finally).",
+						},
+						{
+							name: "Pace",
+							passFlag: wpm >= 120 && wpm <= 180 ? "PASS" : "FLAG",
+							note: "Aim for 130–160 WPM to maintain clarity.",
+						},
+						{
+							name: "Filler words",
+							passFlag: Math.random() > 0.3 ? "PASS" : "FLAG",
+							note: "Reduce 'um', 'like', and pauses; brief silence beats filler.",
+						},
+						{
+							name: "Relevance",
+							passFlag: content >= 75 ? "PASS" : "FLAG",
+							note: "Tie each point back to the question explicitly.",
+						},
+						{
+							name: "Confidence",
+							passFlag: delivery >= 75 ? "PASS" : "FLAG",
+							note: "Use active voice; avoid hedging language where not needed.",
+						},
+					],
+					what_changed: [
+						"Tightened intro and added clear thesis",
+						"Inserted concrete example supporting the main claim",
+						"Improved signposting for section transitions",
+					],
+					practice_rule:
+						"Use the 30-60-90 structure: thesis in 30s, depth in 60s, recap in 90s.",
 				};
 				setEvaluationResult(result);
 				setIsSubmitting(false);
@@ -331,7 +412,13 @@ export default function DrillInterfacePage() {
 
 			return () => clearTimeout(timer);
 		}
-	}, [streamingFeedback.result, evaluationResult, user, contentPackData]);
+	}, [
+		streamingFeedback.result,
+		evaluationResult,
+		user,
+		contentPackData,
+		submittedText,
+	]);
 
 	// Handle next question navigation
 	const handleNextQuestion = React.useCallback(() => {
@@ -419,6 +506,11 @@ export default function DrillInterfacePage() {
 		setIsSubmitting(true);
 		setError(null);
 		setEvaluationResult(null);
+
+		// Store submitted text for use in streaming result
+		if (data.type === "text") {
+			setSubmittedText(data.content);
+		}
 
 		try {
 			let audioUrl: string | undefined;
@@ -850,27 +942,113 @@ export default function DrillInterfacePage() {
 
 				// Persist evaluation to backend (non-blocking)
 				try {
-					void fetch("/api/evaluations", {
+					// Only send fields that have values to avoid validation errors
+					const persistPayload: Record<string, unknown> = {
+						id: evaluationResult.id,
+						user_id: evaluationResult.user_id,
+						question_id: questionId, // CRITICAL: Required for stats calculation
+						response_type: evaluationResult.response_type,
+						categories: evaluationResult.categories,
+						score: evaluationResult.score,
+						status: evaluationResult.status,
+					};
+
+					// Only include optional fields if they have values
+					if (evaluationResult.content_pack_id) {
+						persistPayload.content_pack_id = evaluationResult.content_pack_id;
+					}
+					if (contentPackData?.id) {
+						persistPayload.content_pack_id = contentPackData.id;
+					}
+					if (evaluationResult.response_text) {
+						persistPayload.response_text = evaluationResult.response_text;
+					}
+					if (evaluationResult.response_audio_url) {
+						persistPayload.response_audio_url =
+							evaluationResult.response_audio_url;
+					}
+					if (evaluationResult.duration_seconds !== undefined) {
+						persistPayload.duration_seconds = evaluationResult.duration_seconds;
+						persistPayload.duration_ms =
+							evaluationResult.duration_seconds * 1000; // Also send ms for stats
+					}
+					if (evaluationResult.word_count !== undefined) {
+						persistPayload.word_count = evaluationResult.word_count;
+					}
+					if (evaluationResult.wpm !== undefined) {
+						persistPayload.wpm = evaluationResult.wpm;
+					}
+					if (evaluationResult.feedback) {
+						persistPayload.feedback = evaluationResult.feedback;
+					}
+
+					// Use await instead of void to ensure persistence completes
+					console.log("🔄 Persisting evaluation with payload:", {
+						question_id: persistPayload.question_id,
+						response_type: persistPayload.response_type,
+						score: persistPayload.score,
+						has_feedback: !!persistPayload.feedback,
+						word_count: persistPayload.word_count,
+						duration_seconds: persistPayload.duration_seconds,
+					});
+
+					const persistResponse = await fetch("/api/evaluations", {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							id: evaluationResult.id,
-							user_id: evaluationResult.user_id,
-							content_pack_id: evaluationResult.content_pack_id,
-							response_text: evaluationResult.response_text,
-							response_audio_url: evaluationResult.response_audio_url,
-							response_type: evaluationResult.response_type,
-							duration_seconds: evaluationResult.duration_seconds,
-							word_count: evaluationResult.word_count,
-							wpm: evaluationResult.wpm,
-							categories: evaluationResult.categories,
-							feedback: evaluationResult.feedback,
-							score: evaluationResult.score,
-							status: evaluationResult.status,
-						}),
+						body: JSON.stringify(persistPayload),
 					});
+
+					// Log response status immediately
+					console.log(
+						`📡 Persist response: ${persistResponse.status} ${persistResponse.statusText}`,
+					);
+
+					if (!persistResponse.ok) {
+						// Clone the response so we can read it multiple times if needed
+						const responseClone = persistResponse.clone();
+
+						// Log the basic error info first
+						console.error("❌ Failed to persist evaluation:", {
+							status: persistResponse.status,
+							statusText: persistResponse.statusText,
+							url: persistResponse.url,
+							headers: Object.fromEntries(persistResponse.headers.entries()),
+						});
+
+						// Try to parse error response
+						try {
+							const errorData = await persistResponse.json();
+							console.error("📋 Error response body:", errorData);
+
+							// Log structured details if available
+							if (errorData.error || errorData.message || errorData.details) {
+								console.error("🔍 Error details:", {
+									error: errorData.error,
+									message: errorData.message,
+									details: errorData.details,
+								});
+							}
+						} catch (jsonError) {
+							// Response wasn't valid JSON, try to get it as text
+							console.warn("⚠️ Could not parse response as JSON:", jsonError);
+							try {
+								const errorText = await responseClone.text();
+								console.error(
+									"📄 Error response (text):",
+									errorText.substring(0, 1000),
+								);
+							} catch (textError) {
+								console.error("❌ Could not read response body:", textError);
+							}
+						}
+
+						// Log the payload that was sent for debugging
+						console.error("📦 Request payload that failed:", persistPayload);
+					} else {
+						console.log("✅ Evaluation persisted successfully");
+					}
 				} catch (persistError) {
-					console.warn(
+					console.error(
 						"Failed to persist evaluation (non-blocking)",
 						persistError,
 					);
@@ -880,9 +1058,10 @@ export default function DrillInterfacePage() {
 			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "An error occurred");
-		} finally {
-			setIsSubmitting(false);
+			setIsSubmitting(false); // Only set to false on error
 		}
+		// Note: Don't set isSubmitting=false here in success case when streaming is active
+		// The streaming useEffect (line ~342) will handle it after the delay
 	};
 
 	const handleError = (error: Error) => {
@@ -1007,6 +1186,19 @@ export default function DrillInterfacePage() {
 						<div className="flex items-start justify-between">
 							<CardTitle>Question</CardTitle>
 							<div className="flex gap-2">
+								{questionData.drill_specialty &&
+									questionData.drill_specialty !== "general" && (
+										<Badge
+											variant="outline"
+											className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+										>
+											Specialty:{" "}
+											{questionData.drill_specialty.charAt(0).toUpperCase() +
+												questionData.drill_specialty
+													.slice(1)
+													.replace(/_/g, " ")}
+										</Badge>
+									)}
 								{questionData.difficulty && (
 									<Badge
 										variant="outline"

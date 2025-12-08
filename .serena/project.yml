@@ -37,7 +37,7 @@ read_only: false
 
 # list of tool names to exclude. We recommend not excluding any tools, see the readme for more details.
 # Below is the complete list of tools for convenience.
-# To make sure you have the latest list of tools, and to view their descriptions, 
+# To make sure you have the latest list of tools, and to view their descriptions,
 # execute `uv run scripts/print_tool_overview.py`.
 #
 #  * `activate_project`: Activates a project by name.
@@ -78,7 +78,144 @@ excluded_tools: []
 
 # initial prompt for the project. It will always be given to the LLM upon activating the project
 # (contrary to the memories, which are loaded on demand).
-initial_prompt: ""
+initial_prompt: |
+  # InterviewApp - AI-Powered Interview Preparation Application
+
+  ## Project Overview
+  InterviewApp is an AI-powered interview preparation application built with Next.js 16, TypeScript, and Supabase. The application helps users practice behavioral interviews by submitting responses (text or audio) and receiving AI-generated feedback with scores across 7 behavioral competencies.
+
+  ## Architecture & Patterns
+
+  ### Onion Architecture (Clean Architecture)
+  The codebase follows Onion Architecture with Domain-Driven Design principles:
+  - **Domain Layer** (`src/domain/`): Core business logic, entities, value objects, domain services. Must remain pure and framework-independent.
+  - **Application Layer** (`src/application/`): Use cases, DTOs, validation schemas, orchestration logic.
+  - **Infrastructure Layer** (`src/infrastructure/`): External adapters (Supabase, PostHog, Redis, OpenAI, etc.), configuration, DI container.
+  - **Presentation Layer** (`src/presentation/`, `src/app/`): Next.js App Router routes, API handlers, UI components.
+
+  ### Feature Modules (Vertical Slices)
+  Feature-specific code lives in `src/features/<feature>/` with its own domain/application/infrastructure/presentation layers:
+  - `booking`: Content pack ingestion and validation
+  - `scheduling`: Evaluation pipeline (LLM, ASR, transcript recovery)
+  - `auth`: Authentication and entitlement policies
+  - `billing`: Stripe webhook orchestration
+  - `notifications`: Analytics and PostHog adapters
+
+  ### Dependency Rules
+  - Domain layer must NOT import from application/infrastructure/presentation
+  - Feature modules may only import from other features through documented interfaces in `src/shared`
+  - Use path aliases: `@domain/*`, `@app/*`, `@infra/*`, `@presentation/*`, `@shared/*`, `@features/*`
+  - Boundary enforcement via Biome `noRestrictedImports` rules (`pnpm lint:boundaries`)
+
+  ## Tech Stack
+
+  - **Framework**: Next.js 16.0.7 (App Router, Turbopack)
+  - **Language**: TypeScript 5.9+ (strict mode)
+  - **Database**: Supabase (PostgreSQL)
+  - **Auth**: Supabase Auth
+  - **Analytics**: PostHog (with PII scrubbing)
+  - **Monitoring**: Sentry
+  - **Queue**: BullMQ with Redis (Upstash)
+  - **AI**: OpenAI API
+  - **Styling**: Tailwind CSS 4.x, Radix UI components
+  - **Testing**: Vitest (unit/integration), Playwright (e2e)
+  - **Linting/Formatting**: Biome
+  - **Package Manager**: pnpm 10.x
+
+  ## Key Patterns & Conventions
+
+  ### Next.js 16+ Patterns
+  - Route `params` and `searchParams` are Promises and MUST be awaited
+  - Use `proxy.ts` instead of `middleware.ts` for global request handling
+  - Server components by default, client components when needed
+
+  ### Database & Types
+  - Always use generated TypeScript types from `src/types/database.ts` (or `database.types.ts`)
+  - Regenerate types after schema changes: `pnpm run update-types` or `pnpm run update-types:remote`
+  - Use `Tables<"table_name">`, `TablesInsert<"table_name">`, `TablesUpdate<"table_name">` types
+  - Never manually define interfaces that duplicate database structures
+
+  ### Supabase Workflow
+  - ALWAYS use Supabase CLI for migrations: `pnpm supabase migration new <name>`
+  - NEVER manually create migration files
+  - Regenerate types after applying migrations
+  - Use typed clients from `src/lib/supabase/{client,server,proxy}.ts`
+
+  ### Security & Compliance
+  - All user input must be scrubbed for PHI (emails, phone numbers) before database save
+  - PostHog events must pass through `DataScrubber` before sending
+  - Sentry error contexts must be scrubbed
+  - Use `src/shared/security/phi-scrubber.ts` and `data-scrubber.ts`
+
+  ### Testing Requirements
+  - Test-first development (TDD): Write tests → Get approval → Tests fail → Implement → Tests pass
+  - Unit tests: `tests/unit/` (Vitest)
+  - Integration tests: `tests/integration/` (Vitest)
+  - E2E tests: `tests/e2e/` (Playwright)
+  - Code coverage target: ≥80% for unit + integration tests
+  - Tests must run without network, file system, or environment access (where applicable)
+
+  ## Code Quality Standards
+
+  ### Naming Conventions
+  - Components: PascalCase, suffixed with 'Component' (e.g., `UserProfileComponent`)
+  - Services: PascalCase, suffixed with 'Service' (e.g., `AuthService`)
+  - Interfaces: PascalCase, prefixed with 'I' (e.g., `IUser`)
+  - Variables/Functions: camelCase
+  - Constants: UPPER_SNAKE_CASE
+
+  ### TypeScript
+  - Always include type annotations
+  - Use interfaces for object shapes
+  - Prefer `const` over `let`
+  - Strict mode enabled
+
+  ### Code Style
+  - 2 spaces indentation
+  - Use Biome for formatting and linting
+  - JSDoc comments for all exported functions, services, and API endpoints
+  - Comments required where they improve clarity (avoid redundant commentary)
+
+  ### Commit & PR Standards
+  - Conventional commit format: `<type>(<scope>): <description>`
+  - Must pass `lefthook` hooks
+  - Before PR: Submit proposal document
+  - After PR: Provide implementation report
+
+  ## Development Workflow
+
+  ### Setup
+  ```bash
+  pnpm install
+  pnpm prepare  # Install git hooks
+  cp .env.example .env.local
+  pnpm dev      # Start dev server (port 3000)
+  ```
+
+  ### Common Commands
+  - `pnpm dev`: Start Next.js dev server
+  - `pnpm dev:all`: Start app + worker concurrently
+  - `pnpm build`: Build for production
+  - `pnpm test`: Run all tests
+  - `pnpm lint`: Run Biome linting
+  - `pnpm lint:boundaries`: Check dependency boundaries
+  - `pnpm typecheck`: TypeScript type checking
+  - `pnpm update-types`: Regenerate database types
+
+  ### MCP Integration
+  - **Context7**: Use for library documentation and code generation
+  - **Supabase**: Use MCP tools for database operations, migrations, type generation
+  - **PostHog**: All events must be scrubbed via DataScrubber
+  - **Sequential-Thinking**: Follow sequential workflow when marked in plans
+
+  ## Important Notes
+
+  - Always check existing memories (`supabase_workflow`, `nextjs-version-and-patterns`) before starting work
+  - Follow the Constitution (`.specify/memory/constitution.md`) for all development decisions
+  - Respect layer boundaries and feature module isolation
+  - Keep domain logic pure and framework-independent
+  - Ensure all code passes Biome checks and TypeScript strict mode
+  - Maintain test coverage above 80% for unit + integration tests
 
 project_name: "InterviewApp"
 included_optional_tools: []

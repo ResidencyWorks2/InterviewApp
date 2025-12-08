@@ -51,6 +51,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "cardiology",
 						"tags": [
 							"cardiology",
 							"emergency_medicine",
@@ -70,6 +71,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "pediatrics",
 						"tags": ["pediatrics", "fever", "clinical_assessment"],
 						"competency": "clinical_reasoning",
 						"expectedResponseElements": [
@@ -85,6 +87,7 @@
 						"type": "text",
 						"difficulty": "beginner",
 						"estimatedMinutes": 4,
+						"drill_specialty": "general",
 						"tags": ["patient_safety", "professionalism", "error_disclosure"],
 						"competency": "professionalism",
 						"expectedResponseElements": [
@@ -143,6 +146,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 6,
+						"drill_specialty": "general",
 						"tags": [
 							"autonomy",
 							"capacity",
@@ -163,6 +167,7 @@
 						"type": "text",
 						"difficulty": "hard",
 						"estimatedMinutes": 6,
+						"drill_specialty": "general",
 						"tags": ["professionalism", "patient_safety", "colleague_wellness"],
 						"competency": "professionalism",
 						"expectedResponseElements": [
@@ -178,6 +183,7 @@
 						"type": "text",
 						"difficulty": "hard",
 						"estimatedMinutes": 6,
+						"drill_specialty": "emergency_medicine",
 						"tags": ["justice", "resource_allocation", "triage"],
 						"competency": "ethical_reasoning",
 						"expectedResponseElements": [
@@ -193,6 +199,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "general",
 						"tags": ["error_disclosure", "transparency", "patient_safety"],
 						"competency": "professionalism",
 						"expectedResponseElements": [
@@ -247,6 +254,7 @@
 						"type": "text",
 						"difficulty": "hard",
 						"estimatedMinutes": 6,
+						"drill_specialty": "pediatrics",
 						"tags": [
 							"bad_news",
 							"pediatrics",
@@ -267,6 +275,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "general",
 						"tags": ["conflict_resolution", "de-escalation", "professionalism"],
 						"competency": "communication",
 						"expectedResponseElements": [
@@ -282,6 +291,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 4,
+						"drill_specialty": "general",
 						"tags": [
 							"cultural_competence",
 							"informed_consent",
@@ -301,6 +311,7 @@
 						"type": "text",
 						"difficulty": "beginner",
 						"estimatedMinutes": 5,
+						"drill_specialty": "internal_medicine",
 						"tags": ["health_literacy", "patient_education", "chronic_disease"],
 						"competency": "communication",
 						"expectedResponseElements": [
@@ -355,6 +366,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "general",
 						"tags": ["interprofessional", "patient_safety", "hierarchy"],
 						"competency": "teamwork",
 						"expectedResponseElements": [
@@ -370,6 +382,7 @@
 						"type": "text",
 						"difficulty": "intermediate",
 						"estimatedMinutes": 5,
+						"drill_specialty": "general",
 						"tags": ["conflict_management", "leadership", "patient_care"],
 						"competency": "leadership",
 						"expectedResponseElements": [
@@ -385,6 +398,7 @@
 						"type": "text",
 						"difficulty": "beginner",
 						"estimatedMinutes": 5,
+						"drill_specialty": "general",
 						"tags": ["handoffs", "patient_safety", "communication"],
 						"competency": "teamwork",
 						"expectedResponseElements": [

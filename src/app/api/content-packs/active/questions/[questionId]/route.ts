@@ -58,6 +58,12 @@ export async function GET(
 					id: string;
 					text: string;
 					type: string;
+					drill_specialty?: string; // NEW: Specialty field
+					difficulty?: string;
+					estimatedMinutes?: number;
+					tags?: string[];
+					competency?: string;
+					expectedResponseElements?: string[];
 				}>;
 			}>;
 		};

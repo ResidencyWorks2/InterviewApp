@@ -22,7 +22,8 @@ export function useDrillProgress(drillId: string) {
 	const [error, setError] = useState<string | null>(null);
 
 	const fetchProgress = useCallback(async () => {
-		if (!user || !drillId) {
+		// Don't fetch if drillId is invalid or placeholder
+		if (!user || !drillId || drillId === "loading") {
 			setLoading(false);
 			return;
 		}
@@ -55,7 +56,8 @@ export function useDrillProgress(drillId: string) {
 			completed_questions: number;
 			completed?: boolean;
 		}) => {
-			if (!user || !drillId) {
+			// Don't update if drillId is invalid or placeholder
+			if (!user || !drillId || drillId === "loading") {
 				return;
 			}
 

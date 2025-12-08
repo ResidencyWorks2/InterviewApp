@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
+import * as React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui";
@@ -13,6 +14,7 @@ import type {
 	EvaluationCategories,
 	EvaluationResult,
 } from "@/types/evaluation";
+import { ChecklistModal } from "./ChecklistModal";
 
 export interface EvaluationResultDisplayProps {
 	result: EvaluationResult;
@@ -34,6 +36,12 @@ export function EvaluationResultDisplay({
 	showNextButton = true,
 	nextButtonText = "Next Question",
 }: EvaluationResultDisplayProps) {
+	const [checklistOpen, setChecklistOpen] = React.useState(false);
+	const [selectedCategory, setSelectedCategory] = React.useState<string>("");
+	const [selectedCategoryIcon, setSelectedCategoryIcon] = React.useState<
+		string | undefined
+	>(undefined);
+
 	console.log("🔍 EvaluationResultDisplay received:", {
 		status: result.status,
 		score: result.score,
@@ -42,6 +50,13 @@ export function EvaluationResultDisplay({
 		hasCategories: Boolean(result.categories),
 		fullResult: result,
 	});
+
+	const handleChipClick = (categoryName: string, icon?: string) => {
+		setSelectedCategory(categoryName);
+		setSelectedCategoryIcon(icon);
+		setChecklistOpen(true);
+	};
+
 	const getStatusColor = (status: string) => {
 		switch (status) {
 			case "COMPLETED":
@@ -126,173 +141,198 @@ export function EvaluationResultDisplay({
 	}
 
 	return (
-		<Card className={cn("w-full max-w-2xl mx-auto", className)}>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<CardTitle>Evaluation Results</CardTitle>
-					<Badge className={getStatusColor(result.status)}>
-						{result.status}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent className="space-y-6">
-				{/* Overall Score */}
-				<div className="text-center">
-					{typeof result.score === "number" ? (
-						<ScorePopover
-							score={result.score}
-							categories={result.categories}
-							feedback={result.feedback || undefined}
-						>
-							<div className="inline-block">
-								<div className="text-4xl font-bold text-primary mb-2">
-									{result.score}%
-								</div>
-								<div className="text-sm text-muted-foreground">
-									Click for detailed breakdown
-								</div>
-							</div>
-						</ScorePopover>
-					) : (
-						<div className="inline-block">
-							<div className="text-4xl font-bold text-primary mb-2">N/A</div>
-							<div className="text-sm text-muted-foreground">
-								Score unavailable
-							</div>
-						</div>
-					)}
-				</div>
-
-				{/* Category Breakdown (7 chips with popovers) */}
-				<div className="space-y-4">
-					<h3 className="text-lg font-semibold">Category Breakdown</h3>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-						{/* Render 4 numeric categories */}
-						{result.categories &&
-							Object.entries(result.categories).map(([category, score]) => (
-								<div key={category} className="space-y-2">
-									<div className="flex items-center justify-between">
-										<span className="font-medium">
-											{getCategoryLabel(category as keyof EvaluationCategories)}
-										</span>
-										<Badge variant="outline" className="font-semibold">
-											{score}%
-										</Badge>
+		<>
+			<Card className={cn("w-full max-w-2xl mx-auto", className)}>
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<CardTitle>Evaluation Results</CardTitle>
+						<Badge className={getStatusColor(result.status)}>
+							{result.status}
+						</Badge>
+					</div>
+				</CardHeader>
+				<CardContent className="space-y-6">
+					{/* Overall Score */}
+					<div className="text-center">
+						{typeof result.score === "number" ? (
+							<ScorePopover
+								score={result.score}
+								categories={result.categories}
+								feedback={result.feedback || undefined}
+							>
+								<div className="inline-block">
+									<div className="text-4xl font-bold text-primary mb-2">
+										{result.score}%
 									</div>
-									<p className="text-sm text-muted-foreground">
-										{getCategoryDescription(
-											category as keyof EvaluationCategories,
-										)}
-									</p>
+									<div className="text-sm text-muted-foreground">
+										Click for detailed breakdown
+									</div>
 								</div>
-							))}
+							</ScorePopover>
+						) : (
+							<div className="inline-block">
+								<div className="text-4xl font-bold text-primary mb-2">N/A</div>
+								<div className="text-sm text-muted-foreground">
+									Score unavailable
+								</div>
+							</div>
+						)}
+					</div>
 
-						{/* Render additional pass/flag chips up to 7 total */}
-						{result.category_flags?.slice(0, 7).map((flag) => (
-							<Popover key={`${flag.name}-${flag.passFlag}`}>
-								<PopoverTrigger asChild>
+					{/* Category Breakdown (7 chips with popovers) */}
+					<div className="space-y-4">
+						<h3 className="text-lg font-semibold">Category Breakdown</h3>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+							{/* Render 4 numeric categories */}
+							{result.categories &&
+								Object.entries(result.categories).map(([category, score]) => (
+									<div key={category} className="space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="font-medium">
+												{getCategoryLabel(
+													category as keyof EvaluationCategories,
+												)}
+											</span>
+											<Badge variant="outline" className="font-semibold">
+												{score}%
+											</Badge>
+										</div>
+										<p className="text-sm text-muted-foreground">
+											{getCategoryDescription(
+												category as keyof EvaluationCategories,
+											)}
+										</p>
+									</div>
+								))}
+
+							{/* Render additional pass/flag chips up to 7 total */}
+							{result.category_flags?.slice(0, 7).map((flag) => (
+								<div key={`${flag.name}-${flag.passFlag}`}>
 									<button
 										type="button"
+										onClick={() =>
+											handleChipClick(
+												flag.name,
+												flag.passFlag === "PASS" ? "✅" : "⚠️",
+											)
+										}
 										className={cn(
-											"flex items-center justify-between w-full border rounded-md px-3 py-2 text-left",
+											"flex items-center justify-between w-full border rounded-md px-3 py-2 text-left transition-all hover:shadow-md",
 											flag.passFlag === "PASS"
-												? "border-green-200 bg-green-50 text-green-800"
-												: "border-yellow-200 bg-yellow-50 text-yellow-800",
+												? "border-green-200 bg-green-50 text-green-800 hover:bg-green-100"
+												: "border-yellow-200 bg-yellow-50 text-yellow-800 hover:bg-yellow-100",
 										)}
-										aria-label={`${flag.name} ${
-											flag.passFlag === "PASS" ? "✅" : "⚠️"
-										}`}
+										aria-label={`Open ${flag.name} checklist`}
 									>
 										<span className="font-medium">{flag.name}</span>
 										<span className="text-sm">
 											{flag.passFlag === "PASS" ? "✅" : "⚠️"}
 										</span>
 									</button>
-								</PopoverTrigger>
-								<PopoverContent align="start" className="max-w-sm">
-									<p className="text-sm text-muted-foreground whitespace-pre-wrap">
-										{flag.note}
-									</p>
-								</PopoverContent>
-							</Popover>
-						))}
+									<Popover>
+										<PopoverTrigger asChild>
+											<button
+												type="button"
+												className="text-xs text-muted-foreground hover:text-foreground mt-1 w-full text-left"
+											>
+												Quick tip (click to see full checklist)
+											</button>
+										</PopoverTrigger>
+										<PopoverContent align="start" className="max-w-sm">
+											<p className="text-sm text-muted-foreground whitespace-pre-wrap">
+												{flag.note}
+											</p>
+										</PopoverContent>
+									</Popover>
+								</div>
+							))}
+						</div>
 					</div>
-				</div>
 
-				{/* Feedback */}
-				{result.feedback && (
-					<div className="space-y-2">
-						<h3 className="text-lg font-semibold">Detailed Feedback</h3>
-						<div className="p-4 bg-muted rounded-lg prose prose-sm dark:prose-invert max-w-none">
-							<ReactMarkdown remarkPlugins={[remarkGfm]}>
-								{result.feedback}
-							</ReactMarkdown>
+					{/* Feedback */}
+					{result.feedback && (
+						<div className="space-y-2">
+							<h3 className="text-lg font-semibold">Detailed Feedback</h3>
+							<div className="p-4 bg-muted rounded-lg prose prose-sm dark:prose-invert max-w-none">
+								<ReactMarkdown remarkPlugins={[remarkGfm]}>
+									{result.feedback}
+								</ReactMarkdown>
+							</div>
 						</div>
-					</div>
-				)}
+					)}
 
-				{/* What changed + Rule to practice next */}
-				{(result.what_changed?.length || result.practice_rule) && (
-					<div className="space-y-3">
-						<h3 className="text-lg font-semibold">Improvements</h3>
-						{result.what_changed && result.what_changed.length > 0 && (
-							<ul className="list-disc list-inside space-y-1 text-sm">
-								{result.what_changed.slice(0, 3).map((item) => (
-									<li key={item}>{item}</li>
-								))}
-							</ul>
-						)}
-						{result.practice_rule && (
-							<p className="text-sm text-muted-foreground">
-								Rule to practice next: {result.practice_rule}
-							</p>
-						)}
-					</div>
-				)}
+					{/* What changed + Rule to practice next */}
+					{(result.what_changed?.length || result.practice_rule) && (
+						<div className="space-y-3">
+							<h3 className="text-lg font-semibold">Improvements</h3>
+							{result.what_changed && result.what_changed.length > 0 && (
+								<ul className="list-disc list-inside space-y-1 text-sm">
+									{result.what_changed.slice(0, 3).map((item) => (
+										<li key={item}>{item}</li>
+									))}
+								</ul>
+							)}
+							{result.practice_rule && (
+								<p className="text-sm text-muted-foreground">
+									Rule to practice next: {result.practice_rule}
+								</p>
+							)}
+						</div>
+					)}
 
-				{/* Metrics */}
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-					<div className="text-center">
-						<div className="text-2xl font-bold text-primary">
-							{result.word_count || 0}
+					{/* Metrics */}
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+						<div className="text-center">
+							<div className="text-2xl font-bold text-primary">
+								{result.word_count || 0}
+							</div>
+							<div className="text-xs text-muted-foreground">Words</div>
 						</div>
-						<div className="text-xs text-muted-foreground">Words</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-primary">
+								{result.wpm || 0}
+							</div>
+							<div className="text-xs text-muted-foreground">WPM</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-primary">
+								{result.duration_seconds
+									? Math.round(result.duration_seconds)
+									: 0}
+								s
+							</div>
+							<div className="text-xs text-muted-foreground">Duration</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-primary">
+								{result.response_type === "audio" ? "🎤" : "✍️"}
+							</div>
+							<div className="text-xs text-muted-foreground">
+								{result.response_type === "audio" ? "Audio" : "Text"}
+							</div>
+						</div>
 					</div>
-					<div className="text-center">
-						<div className="text-2xl font-bold text-primary">
-							{result.wpm || 0}
-						</div>
-						<div className="text-xs text-muted-foreground">WPM</div>
-					</div>
-					<div className="text-center">
-						<div className="text-2xl font-bold text-primary">
-							{result.duration_seconds
-								? Math.round(result.duration_seconds)
-								: 0}
-							s
-						</div>
-						<div className="text-xs text-muted-foreground">Duration</div>
-					</div>
-					<div className="text-center">
-						<div className="text-2xl font-bold text-primary">
-							{result.response_type === "audio" ? "🎤" : "✍️"}
-						</div>
-						<div className="text-xs text-muted-foreground">
-							{result.response_type === "audio" ? "Audio" : "Text"}
-						</div>
-					</div>
-				</div>
 
-				{/* Next Question Button */}
-				{showNextButton && onNextQuestion && (
-					<div className="mt-6 flex justify-center">
-						<Button onClick={onNextQuestion} size="lg" className="gap-2">
-							{nextButtonText}
-							<ArrowRight className="h-4 w-4" />
-						</Button>
-					</div>
-				)}
-			</CardContent>
-		</Card>
+					{/* Next Question Button */}
+					{showNextButton && onNextQuestion && (
+						<div className="mt-6 flex justify-center">
+							<Button onClick={onNextQuestion} size="lg" className="gap-2">
+								{nextButtonText}
+								<ArrowRight className="h-4 w-4" />
+							</Button>
+						</div>
+					)}
+				</CardContent>
+			</Card>
+
+			{/* Checklist Modal */}
+			<ChecklistModal
+				open={checklistOpen}
+				onOpenChange={setChecklistOpen}
+				category={selectedCategory}
+				categoryIcon={selectedCategoryIcon}
+				evaluationId={result.id}
+			/>
+		</>
 	);
 }

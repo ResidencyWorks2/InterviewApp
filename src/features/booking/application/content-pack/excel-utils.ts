@@ -269,6 +269,8 @@ export function parseExcelContentPack(buffer: ArrayBuffer): ContentPackData {
 		}
 
 		const options = parseList(getValue(row, "Options"));
+		const drillSpecialty = getValue(row, "Drill Specialty", "drill_specialty");
+
 		evaluation.questions.push({
 			id: getRequiredValue(
 				row,
@@ -282,6 +284,7 @@ export function parseExcelContentPack(buffer: ArrayBuffer): ContentPackData {
 				| "text"
 				| "rating",
 			...(options ? { options } : {}),
+			...(drillSpecialty ? { drill_specialty: drillSpecialty } : {}),
 		});
 	});
 
@@ -320,7 +323,14 @@ const BLANK_HEADERS = {
 	categories: ["ID", "Name", "Description"],
 	evaluations: ["ID", "Title", "Description"],
 	criteria: ["Evaluation ID", "Criteria ID", "Name", "Weight", "Description"],
-	questions: ["Evaluation ID", "Question ID", "Text", "Type", "Options"],
+	questions: [
+		"Evaluation ID",
+		"Question ID",
+		"Text",
+		"Type",
+		"Options",
+		"Drill Specialty",
+	],
 } as const;
 
 const SAMPLE_PACK = {
@@ -393,6 +403,7 @@ const SAMPLE_PACK = {
 					id: "q-let-const-var",
 					text: "Explain the difference between let, const, and var in JavaScript.",
 					type: "text",
+					drill_specialty: "general",
 				},
 			],
 		},
@@ -431,6 +442,7 @@ const SAMPLE_PACK = {
 					id: "q-conflict-star",
 					text: "Tell me about a time you had a conflict and how you resolved it.",
 					type: "text",
+					drill_specialty: "general",
 				},
 			],
 		},
@@ -519,7 +531,10 @@ export function generateSampleContentPackWorkbook(): Buffer {
 
 	const questionRows = SAMPLE_PACK.evaluations.flatMap((evaluation) =>
 		evaluation.questions.map((question) => {
-			const questionWithOptions = question as { options?: string[] };
+			const questionWithOptions = question as {
+				options?: string[];
+				drill_specialty?: string;
+			};
 			const optionsValue = Array.isArray(questionWithOptions.options)
 				? questionWithOptions.options.join(", ")
 				: "";
@@ -530,6 +545,7 @@ export function generateSampleContentPackWorkbook(): Buffer {
 				Text: question.text,
 				Type: question.type,
 				Options: optionsValue,
+				"Drill Specialty": questionWithOptions.drill_specialty || "general",
 			};
 		}),
 	);
