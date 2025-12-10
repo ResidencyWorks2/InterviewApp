@@ -5,7 +5,22 @@
 -- ADDITIONAL SAMPLE EVALUATION RESULTS
 -- ==============================================
 
--- Insert additional sample evaluation results for more comprehensive testing
+-- NOTE: Evaluation results seed data is commented out because the evaluation_results table
+-- schema was changed in migration 20251121000000_fix_evaluation_results_schema.sql
+-- to support the AI/ASR evaluation feature. The new schema requires:
+-- - request_id (UUID PRIMARY KEY)
+-- - job_id (TEXT NOT NULL)
+-- - score, feedback, what_changed, practice_rule (all required)
+-- - duration_ms (instead of duration_seconds)
+--
+-- The old seed data used columns that no longer exist:
+-- - duration_seconds, word_count, wpm, categories, status
+--
+-- To seed evaluation results, use the AI/ASR evaluation API or create a new seed file
+-- that matches the current schema.
+
+/*
+-- Insert additional sample evaluation results for more comprehensive testing (DISABLED - schema mismatch)
 INSERT INTO public.evaluation_results (
   user_id,
   content_pack_id,
@@ -156,6 +171,7 @@ INSERT INTO public.evaluation_results (
   NOW() - INTERVAL '1 hour',
   NOW() - INTERVAL '1 hour'
 );
+*/
 
 -- ==============================================
 -- ADDITIONAL USER PROGRESS DATA

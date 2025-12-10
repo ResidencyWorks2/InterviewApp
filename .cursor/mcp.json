@@ -1,7 +1,60 @@
 {
 	"mcpServers": {
 		"Sentry": {
-			"url": "https://mcp.sentry.dev/mcp/residencyworks/javascript-nextjs"
+			"command": "npx",
+			"args": ["-y", "mcp-remote@latest", "https://mcp.sentry.dev/mcp"]
+		},
+		"context7": {
+			"args": [
+				"-y",
+				"@upstash/context7-mcp",
+				"--api-key",
+				"ctx7sk-956db346-2545-4ea0-9987-7f3da855afac"
+			],
+			"command": "npx"
+		},
+		"supabase": {
+			"url": "https://mcp.supabase.com/mcp"
+		},
+		"posthog": {
+			"url": "https://mcp.posthog.com/mcp",
+			"headers": {
+				"Authorization": "Bearer phx_cbwu63ltwwl6ngJMSparLrqXkBwkPu8b82OYhF3fFETD2QV"
+			}
+		},
+		"sequential-thinking": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@modelcontextprotocol/server-sequential-thinking@2025.11.25"
+			]
+		},
+		"serena": {
+			"command": "uvx",
+			"args": [
+				"--from",
+				"git+https://github.com/oraios/serena",
+				"serena",
+				"start-mcp-server",
+				"--project",
+				"InterviewApp",
+				"--context",
+				"ide",
+				"--mode",
+				"editing",
+				"--mode",
+				"planning",
+				"--mode",
+				"interactive",
+				"--mode",
+				"one-shot",
+				"--mode",
+				"onboarding"
+			]
+		},
+		"accessibility": {
+			"command": "npx",
+			"args": ["-y", "a11y-color-contrast-mcp"]
 		}
 	}
 }

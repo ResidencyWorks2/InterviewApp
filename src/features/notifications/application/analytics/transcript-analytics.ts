@@ -1,3 +1,5 @@
+import { DataScrubber } from "@/shared/security/data-scrubber";
+
 export type AnalyticsEventName =
 	| "drill_started"
 	| "drill_submitted"
@@ -25,7 +27,6 @@ class ConsoleAnalyticsClient implements IAnalyticsClient {
 	track<TPayload extends Record<string, unknown>>(
 		event: IAnalyticsEvent<TPayload>,
 	): void {
-		// eslint-disable-next-line no-console
 		console.info("[analytics]", JSON.stringify(event));
 	}
 }
@@ -50,7 +51,6 @@ class PostHogAnalyticsClient implements IAnalyticsClient {
 		event: IAnalyticsEvent<TPayload>,
 	): void {
 		if (!this.projectKey) {
-			// eslint-disable-next-line no-console
 			console.warn("[analytics] PostHog project key not configured");
 			return;
 		}
@@ -58,6 +58,14 @@ class PostHogAnalyticsClient implements IAnalyticsClient {
 		// Use userId from context, or fallback to session/anonymous
 		const distinctId =
 			event.context?.userId || event.context?.sessionId || "anonymous";
+
+		// Scrub PII from event payload before transmission
+		const scrubbedPayload = event.payload
+			? DataScrubber.scrubObject(event.payload)
+			: {};
+		const scrubbedContext = event.context
+			? DataScrubber.scrubObject(event.context as Record<string, unknown>)
+			: {};
 
 		// Build PostHog event payload
 		const payload = {
@@ -67,8 +75,8 @@ class PostHogAnalyticsClient implements IAnalyticsClient {
 					distinct_id: distinctId,
 					event: event.name,
 					properties: {
-						...(event.payload || {}),
-						sessionId: event.context?.sessionId,
+						...scrubbedPayload,
+						sessionId: scrubbedContext.sessionId,
 						timestamp: new Date().toISOString(),
 					},
 					timestamp: new Date().toISOString(),
@@ -84,7 +92,6 @@ class PostHogAnalyticsClient implements IAnalyticsClient {
 			},
 			method: "POST",
 		}).catch((err) => {
-			// eslint-disable-next-line no-console
 			console.error("[analytics] PostHog batch send failed:", err);
 		});
 	}
@@ -103,7 +110,7 @@ export function initializeAnalytics(): void {
 	const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
 	if (posthogKey) {
 		client = new PostHogAnalyticsClient(posthogKey);
-		// eslint-disable-next-line no-console
+
 		console.info("[analytics] PostHog initialized");
 	}
 }

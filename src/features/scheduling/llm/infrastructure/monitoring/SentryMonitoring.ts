@@ -2,7 +2,17 @@
  * Sentry monitoring integration for LLM service
  */
 
-import * as Sentry from "@sentry/nextjs";
+import {
+	addBreadcrumb,
+	captureException,
+	captureMessage,
+	init,
+	setContext,
+	setTag,
+	setUser,
+	withScope,
+} from "@sentry/nextjs";
+import { DataScrubber } from "@/shared/security/data-scrubber";
 import { extractErrorInfo } from "../../domain/errors/LLMErrors";
 import type { AnalyticsConfig } from "../../types/config";
 
@@ -23,7 +33,7 @@ export class SentryMonitoring {
 	 */
 	private initialize(): void {
 		if (this.config.sentryDsn && !this.isInitialized) {
-			Sentry.init({
+			init({
 				dsn: this.config.sentryDsn,
 				environment: process.env.NODE_ENV || "development",
 				integrations: [],
@@ -33,6 +43,26 @@ export class SentryMonitoring {
 					if (event.tags?.service !== "llm-feedback-engine") {
 						return null;
 					}
+
+					// Scrub PII from event data before transmission
+					if (event.user) {
+						event.user = DataScrubber.scrubObject(
+							event.user as Record<string, unknown>,
+						) as typeof event.user;
+					}
+
+					if (event.contexts) {
+						event.contexts = DataScrubber.scrubObject(
+							event.contexts as Record<string, unknown>,
+						) as typeof event.contexts;
+					}
+
+					if (event.extra) {
+						event.extra = DataScrubber.scrubObject(
+							event.extra as Record<string, unknown>,
+						) as typeof event.extra;
+					}
+
 					return event;
 				},
 			});
@@ -61,19 +91,25 @@ export class SentryMonitoring {
 
 		const errorInfo = extractErrorInfo(error);
 
-		Sentry.withScope((scope) => {
+		withScope((scope) => {
 			// Set service tag
 			scope.setTag("service", "llm-feedback-engine");
 			scope.setTag("component", "llm-service");
 
-			// Set context data
+			// Set context data (scrubbed)
 			if (context.submissionId) {
 				scope.setTag("submission_id", context.submissionId);
-				scope.setContext("submission", {
+				const submissionContext = {
 					id: context.submissionId,
 					userId: context.userId,
 					questionId: context.questionId,
-				});
+				};
+				scope.setContext(
+					"submission",
+					DataScrubber.scrubObject(
+						submissionContext as Record<string, unknown>,
+					) as typeof submissionContext,
+				);
 			}
 
 			if (context.operation) {
@@ -112,7 +148,7 @@ export class SentryMonitoring {
 			}
 
 			// Capture the error
-			Sentry.captureException(error);
+			captureException(error);
 		});
 	}
 
@@ -131,7 +167,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.withScope((scope) => {
+		withScope((scope) => {
 			scope.setTag("service", "llm-feedback-engine");
 			scope.setTag("component", "performance");
 			scope.setTag("operation", data.operation);
@@ -155,7 +191,7 @@ export class SentryMonitoring {
 				scope.setTag("model", data.model);
 			}
 
-			Sentry.captureMessage(
+			captureMessage(
 				`LLM operation ${data.operation} exceeded performance threshold`,
 				"warning",
 			);
@@ -176,7 +212,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.withScope((scope) => {
+		withScope((scope) => {
 			scope.setTag("service", "llm-feedback-engine");
 			scope.setTag("component", "circuit-breaker");
 			scope.setTag("action", event.action);
@@ -193,7 +229,7 @@ export class SentryMonitoring {
 			const level = event.action === "opened" ? "error" : "info";
 			const message = `Circuit breaker ${event.action} for service ${event.service}`;
 
-			Sentry.captureMessage(message, level);
+			captureMessage(message, level);
 		});
 	}
 
@@ -211,7 +247,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.withScope((scope) => {
+		withScope((scope) => {
 			scope.setTag("service", "llm-feedback-engine");
 			scope.setTag("component", "retry");
 			scope.setTag("operation", data.operation);
@@ -231,7 +267,7 @@ export class SentryMonitoring {
 				scope.setUser({ id: data.userId });
 			}
 
-			Sentry.captureMessage(
+			captureMessage(
 				`Retry exhausted for operation ${data.operation} after ${data.attempts} attempts`,
 				"error",
 			);
@@ -251,7 +287,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.withScope((scope) => {
+		withScope((scope) => {
 			scope.setTag("service", "llm-feedback-engine");
 			scope.setTag("component", "rate-limit");
 			scope.setTag("target_service", data.service);
@@ -270,7 +306,7 @@ export class SentryMonitoring {
 				scope.setUser({ id: data.userId });
 			}
 
-			Sentry.captureMessage(
+			captureMessage(
 				`Rate limit hit for service ${data.service}, retry after ${data.retryAfter}s`,
 				"warning",
 			);
@@ -294,23 +330,23 @@ export class SentryMonitoring {
 		}
 
 		// Set tags and user context
-		Sentry.setTag("service", "llm-feedback-engine");
-		Sentry.setTag("operation", operation);
+		setTag("service", "llm-feedback-engine");
+		setTag("operation", operation);
 
 		if (data.submissionId) {
-			Sentry.setTag("submission_id", data.submissionId);
+			setTag("submission_id", data.submissionId);
 		}
 
 		if (data.userId) {
-			Sentry.setUser({ id: data.userId });
+			setUser({ id: data.userId });
 		}
 
 		if (data.questionId) {
-			Sentry.setTag("question_id", data.questionId);
+			setTag("question_id", data.questionId);
 		}
 
 		if (data.model) {
-			Sentry.setTag("model", data.model);
+			setTag("model", data.model);
 		}
 
 		return;
@@ -328,7 +364,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.addBreadcrumb({
+		addBreadcrumb({
 			message,
 			category,
 			level: "info",
@@ -347,7 +383,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.setUser({
+		setUser({
 			id: userId,
 			...additionalData,
 		});
@@ -361,7 +397,7 @@ export class SentryMonitoring {
 			return;
 		}
 
-		Sentry.setContext(key, context);
+		setContext(key, context);
 	}
 
 	/**

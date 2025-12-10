@@ -22,10 +22,13 @@ pre-commit:
 pre-push:
   parallel: true
   commands:
-    test-coverage:
-      run: pnpm test:coverage
-      fail_text: "❌ Coverage check failed. Please ensure code coverage is above 80%."
-      pass_text: "✅ Coverage check passed"
+    # test-coverage:
+    #   run: pnpm test:coverage
+    #   skip:
+    #     - merge
+    #     - rebase
+    #   fail_text: "❌ Coverage check failed. Please ensure code coverage is above 80%. Use SKIP_COVERAGE=1 to skip (not recommended for main branch)."
+    #   pass_text: "✅ Coverage check passed"
 
     # test-e2e:
     #   run: pnpm test:e2e

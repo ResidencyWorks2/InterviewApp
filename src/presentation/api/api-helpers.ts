@@ -44,7 +44,7 @@ export function createErrorResponse(
 	error: string,
 	code?: string,
 	status = 400,
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ): NextResponse {
 	const response: ErrorResponse = {
 		code,
@@ -104,22 +104,36 @@ export function createForbiddenResponse(message = "Forbidden"): NextResponse {
 }
 
 /**
- * Create a rate limit response
+ * Create a rate limit response per FR-013 specification
  * @param retryAfter - Seconds to wait before retrying
+ * @param limit - Maximum number of requests allowed per window
+ * @param remaining - Number of requests remaining in current window
+ * @param resetTime - Unix timestamp when rate limit window resets
  * @returns NextResponse with rate limit error
  */
-export function createRateLimitResponse(retryAfter: number): NextResponse {
+export function createRateLimitResponse(
+	retryAfter: number,
+	limit = 10,
+	remaining = 0,
+	resetTime?: number,
+): NextResponse {
 	return NextResponse.json(
 		{
-			code: "RATE_LIMIT_EXCEEDED",
-			error: "Too many requests",
+			error: "rate_limit_exceeded",
+			message: "Too many requests. Please try again later.",
 			retry_after: retryAfter,
-			timestamp: new Date().toISOString(),
+			limit,
+			window_seconds: 60,
 		},
 		{
 			headers: {
 				"Content-Type": "application/json",
 				"Retry-After": retryAfter.toString(),
+				"X-RateLimit-Limit": limit.toString(),
+				"X-RateLimit-Remaining": remaining.toString(),
+				"X-RateLimit-Reset": resetTime
+					? Math.floor(resetTime / 1000).toString()
+					: (Date.now() + retryAfter * 1000).toString(),
 			},
 			status: 429,
 		},
@@ -134,7 +148,7 @@ export function createRateLimitResponse(retryAfter: number): NextResponse {
  */
 export function createServerErrorResponse(
 	message = "Internal server error",
-	details?: Record<string, any>,
+	details?: Record<string, unknown>,
 ): NextResponse {
 	return createErrorResponse(message, "INTERNAL_SERVER_ERROR", 500, details);
 }
@@ -144,7 +158,7 @@ export function createServerErrorResponse(
  * @param request - NextRequest object
  * @returns Promise resolving to parsed JSON or null
  */
-export async function getRequestBody<T = any>(
+export async function getRequestBody<T = unknown>(
 	request: NextRequest,
 ): Promise<T | null> {
 	try {

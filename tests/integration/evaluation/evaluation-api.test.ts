@@ -21,7 +21,7 @@ vi.mock("ioredis", () => {
 // Mock BullMQ Queue to prevent Redis connection
 vi.mock("bullmq", () => {
 	class MockQueueEvents {
-		constructor(name: string, opts: any) {
+		constructor(name: string, opts: unknown) {
 			console.log("QueueEvents constructor called with:", name, opts);
 		}
 		async close() {
@@ -57,6 +57,28 @@ vi.mock("@/infrastructure/config/clients", () => ({
 	})),
 	createSupabaseServerClient: vi.fn(),
 	createSupabaseBrowserClient: vi.fn(),
+}));
+
+// Mock Supabase server client (used by evaluate route)
+vi.mock("@/infrastructure/supabase/server", () => ({
+	createClient: vi.fn(() => ({
+		auth: {
+			getUser: vi.fn(() => ({
+				data: { user: { id: "test-user-id", email: "test@example.com" } },
+				error: null,
+			})),
+		},
+		from: vi.fn(() => ({
+			select: vi.fn(() => ({
+				eq: vi.fn(() => ({
+					single: vi.fn(() => ({
+						data: null,
+						error: null,
+					})),
+				})),
+			})),
+		})),
+	})),
 }));
 
 // Mock evaluation store
