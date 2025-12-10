@@ -399,10 +399,12 @@ export default function AdminDashboard() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<Button variant="outline" className="w-full" disabled>
-							<Users className="h-4 w-4 mr-2" />
-							Coming Soon
-						</Button>
+						<Link href="/admin/users">
+							<Button variant="outline" className="w-full">
+								<Users className="h-4 w-4 mr-2" />
+								Manage Users
+							</Button>
+						</Link>
 					</CardContent>
 				</Card>
 			</div>

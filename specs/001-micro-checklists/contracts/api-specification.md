@@ -215,7 +215,7 @@ interface CompleteChecklistResponse {
 }
 ```
 
-- **401 Unauthorized** - Authentication required:
+- **401 Unauthorized** - Authentication required or session expired:
 ```json
 {
   "success": false,
@@ -223,6 +223,39 @@ interface CompleteChecklistResponse {
   "code": "UNAUTHORIZED"
 }
 ```
+
+When session has expired:
+```json
+{
+  "success": false,
+  "error": "Your session has expired. Please sign in again.",
+  "code": "UNAUTHORIZED"
+}
+```
+
+- **429 Too Many Requests** - Rate limit exceeded:
+```json
+{
+  "error": "rate_limit_exceeded",
+  "message": "Too many requests. Please try again later.",
+  "retry_after": 45,
+  "limit": 10,
+  "window_seconds": 60
+}
+```
+
+**Response Headers** (when rate limited):
+- `Retry-After`: Integer indicating seconds until the rate limit resets (e.g., "45")
+- `X-RateLimit-Limit`: The maximum number of requests allowed per window (e.g., "10")
+- `X-RateLimit-Remaining`: The number of requests remaining in the current window (e.g., "0")
+- `X-RateLimit-Reset`: Unix timestamp indicating when the rate limit window resets
+
+**Rate Limiting**:
+- **Limit**: 10 requests per minute per user
+- **Window**: 60 seconds (1 minute)
+- **Scope**: Per user (based on authenticated user ID)
+- **Strategy**: In-memory store (production should use Redis for distributed rate limiting)
+- **Behavior**: When limit is exceeded, returns HTTP 429 with retry information
 
 - **500 Internal Server Error** - Server error:
 ```json

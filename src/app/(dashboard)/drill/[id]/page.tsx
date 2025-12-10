@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Target } from "lucide-react";
+import { ArrowLeft, ArrowRight, BarChart3, Target } from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
 import type { EvaluationResult, ResponseType } from "@/components/drill";
@@ -113,9 +113,12 @@ export default function DrillInterfacePage() {
 	>(null);
 	const [submittedText, setSubmittedText] = React.useState<string>("");
 	const [fallbackEnabled, setFallbackEnabled] = React.useState(false);
+	const [loadingSavedEvaluation, setLoadingSavedEvaluation] =
+		React.useState(false);
 
 	const questionId = params.id as string;
 	const evaluationId = searchParams.get("evaluation");
+	const showResults = searchParams.get("showResults") === "true"; // Allow viewing completed questions
 
 	// Fetch question data from content pack
 	React.useEffect(() => {
@@ -241,7 +244,12 @@ export default function DrillInterfacePage() {
 											setCurrentSubmission(updatedSubmission);
 
 											// If completed, redirect to next unanswered question
-											if (updatedSubmission && navigationData.hasNext) {
+											// BUT only if user hasn't explicitly requested to view results
+											if (
+												updatedSubmission &&
+												navigationData.hasNext &&
+												!showResults
+											) {
 												console.log(
 													"✅ Question already answered, redirecting to next question...",
 												);
@@ -260,7 +268,12 @@ export default function DrillInterfacePage() {
 					}
 
 					// If submission exists and is completed, redirect to next unanswered question
-					if (submission && submission.evaluation_status === "completed") {
+					// BUT only if user hasn't explicitly requested to view results
+					if (
+						submission &&
+						submission.evaluation_status === "completed" &&
+						!showResults
+					) {
 						if (navigationData.hasNext) {
 							console.log(
 								"✅ Question already answered, redirecting to next question...",
@@ -280,7 +293,133 @@ export default function DrillInterfacePage() {
 		};
 
 		fetchSubmissionAndRedirect();
-	}, [user, questionId, evaluationId, evaluationData, navigationData, router]);
+	}, [
+		user,
+		questionId,
+		evaluationId,
+		evaluationData,
+		navigationData,
+		router,
+		showResults,
+	]);
+
+	// Fetch and display saved evaluation result when viewing completed question
+	React.useEffect(() => {
+		const loadSavedEvaluation = async () => {
+			// Only load if viewing results mode and submission is completed
+			if (
+				!showResults ||
+				!currentSubmission ||
+				currentSubmission.evaluation_status !== "completed"
+			) {
+				setLoadingSavedEvaluation(false);
+				return;
+			}
+
+			// If we already have an evaluation result, don't reload
+			if (evaluationResult) {
+				setLoadingSavedEvaluation(false);
+				return;
+			}
+
+			setLoadingSavedEvaluation(true);
+			try {
+				// Fetch the latest evaluation result from the API
+				const response = await fetch(`/api/evaluations/user/${questionId}`);
+
+				if (response.ok) {
+					const result = await response.json();
+					const latestAttempt = result.data?.latestAttempt;
+
+					if (latestAttempt) {
+						// Map the database result to EvaluationResult format
+						const savedResult: EvaluationResult = {
+							id:
+								latestAttempt.id ||
+								latestAttempt.request_id ||
+								crypto.randomUUID(),
+							user_id: user?.id ?? "anonymous",
+							content_pack_id:
+								contentPackData?.id || latestAttempt.content_pack_id,
+							response_type: (latestAttempt.response_type ||
+								currentSubmission.response_type ||
+								"text") as "text" | "audio",
+							response_text:
+								latestAttempt.response_text ||
+								currentSubmission.response_text ||
+								undefined,
+							response_audio_url:
+								latestAttempt.response_audio_url ||
+								currentSubmission.response_audio_url ||
+								undefined,
+							duration_seconds:
+								latestAttempt.duration_seconds ||
+								(latestAttempt.duration_ms != null
+									? latestAttempt.duration_ms / 1000
+									: undefined),
+							word_count: latestAttempt.word_count,
+							wpm: latestAttempt.wpm,
+							categories: latestAttempt.categories || {
+								clarity: latestAttempt.score || 0,
+								content: latestAttempt.score || 0,
+								delivery: latestAttempt.score || 0,
+								structure: latestAttempt.score || 0,
+							},
+							feedback: latestAttempt.feedback || "No feedback available",
+							score: latestAttempt.score,
+							status: "COMPLETED",
+							created_at: latestAttempt.created_at || new Date().toISOString(),
+							updated_at:
+								latestAttempt.updated_at ||
+								latestAttempt.created_at ||
+								new Date().toISOString(),
+							category_flags: Array.isArray(latestAttempt.category_flags)
+								? latestAttempt.category_flags
+								: typeof latestAttempt.category_flags === "string"
+									? (() => {
+											try {
+												const parsed = JSON.parse(latestAttempt.category_flags);
+												return Array.isArray(parsed) ? parsed : undefined;
+											} catch {
+												return undefined;
+											}
+										})()
+									: undefined,
+							what_changed: Array.isArray(latestAttempt.what_changed)
+								? latestAttempt.what_changed
+								: typeof latestAttempt.what_changed === "string"
+									? (() => {
+											try {
+												const parsed = JSON.parse(latestAttempt.what_changed);
+												return Array.isArray(parsed) ? parsed : undefined;
+											} catch {
+												return undefined;
+											}
+										})()
+									: undefined,
+							practice_rule: latestAttempt.practice_rule,
+						};
+
+						setEvaluationResult(savedResult);
+						console.log("✅ Loaded saved evaluation result:", savedResult);
+					}
+				}
+			} catch (err) {
+				console.error("Failed to load saved evaluation:", err);
+			} finally {
+				setLoadingSavedEvaluation(false);
+			}
+		};
+
+		loadSavedEvaluation();
+	}, [
+		showResults,
+		currentSubmission,
+		questionId,
+		user,
+		contentPackData,
+		evaluationResult,
+	]);
 
 	// Track drill progress - use a stable ID to avoid hook issues
 	const drillId = evaluationData?.id || "loading";
@@ -431,6 +570,29 @@ export default function DrillInterfacePage() {
 			router.push("/drill");
 		}
 	}, [navigationData, evaluationData, router]);
+
+	// Handle previous question navigation
+	const handlePreviousQuestion = React.useCallback(() => {
+		if (
+			navigationData?.hasPrev &&
+			navigationData.prevQuestionId &&
+			evaluationData?.id
+		) {
+			// Add showResults=true to allow viewing completed questions
+			router.push(
+				`/drill/${navigationData.prevQuestionId}?evaluation=${evaluationData.id}&showResults=true`,
+			);
+		}
+	}, [navigationData, evaluationData, router]);
+
+	// Handle view review/results navigation
+	const handleViewResults = React.useCallback(() => {
+		if (evaluationData?.id) {
+			router.push(
+				`/drill/${evaluationData.id}/review?evaluation=${evaluationData.id}`,
+			);
+		}
+	}, [evaluationData, router]);
 
 	// Handle try again (navigate to first question of drill)
 	const handleTryAgain = React.useCallback(() => {
@@ -992,11 +1154,28 @@ export default function DrillInterfacePage() {
 						duration_seconds: persistPayload.duration_seconds,
 					});
 
-					const persistResponse = await fetch("/api/evaluations", {
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify(persistPayload),
-					});
+					let persistResponse: Response;
+					try {
+						persistResponse = await fetch("/api/evaluations", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify(persistPayload),
+						});
+					} catch (fetchError) {
+						// Network error or fetch failed before getting a response
+						console.error("❌ Failed to persist evaluation: Network error", {
+							error:
+								fetchError instanceof Error
+									? fetchError.message
+									: String(fetchError),
+							errorType:
+								fetchError instanceof Error
+									? fetchError.constructor.name
+									: typeof fetchError,
+							payload: persistPayload,
+						});
+						return; // Exit early, error already logged
+					}
 
 					// Log response status immediately
 					console.log(
@@ -1007,51 +1186,62 @@ export default function DrillInterfacePage() {
 						// Clone the response so we can read it multiple times if needed
 						const responseClone = persistResponse.clone();
 
-						// Log the basic error info first
-						console.error("❌ Failed to persist evaluation:", {
+						// Read response body first before logging
+						let responseText = "";
+						let errorData: Record<string, unknown> | null = null;
+						const contentType =
+							persistResponse.headers.get("Content-Type") || "unknown";
+
+						try {
+							responseText = await responseClone.text();
+							if (responseText.trim().length > 0) {
+								try {
+									errorData = JSON.parse(responseText) as Record<
+										string,
+										unknown
+									>;
+								} catch {
+									// Not JSON, keep as text
+								}
+							}
+						} catch (textError) {
+							console.error("❌ Could not read response body:", textError);
+						}
+
+						// Build comprehensive error info with actual response data
+						const errorInfo = {
 							status: persistResponse.status,
 							statusText: persistResponse.statusText,
 							url: persistResponse.url,
-							headers: Object.fromEntries(persistResponse.headers.entries()),
-						});
+							contentType,
+							responseBody: errorData || responseText || "(empty)",
+							error: errorData?.error || errorData?.code || "UNKNOWN_ERROR",
+							message:
+								errorData?.message ||
+								errorData?.error ||
+								`HTTP ${persistResponse.status} ${persistResponse.statusText}`,
+							details: errorData?.details || null,
+							requestPayload: persistPayload,
+						};
 
-						// Try to parse error response
-						try {
-							const errorData = await persistResponse.json();
-							console.error("📋 Error response body:", errorData);
-
-							// Log structured details if available
-							if (errorData.error || errorData.message || errorData.details) {
-								console.error("🔍 Error details:", {
-									error: errorData.error,
-									message: errorData.message,
-									details: errorData.details,
-								});
-							}
-						} catch (jsonError) {
-							// Response wasn't valid JSON, try to get it as text
-							console.warn("⚠️ Could not parse response as JSON:", jsonError);
-							try {
-								const errorText = await responseClone.text();
-								console.error(
-									"📄 Error response (text):",
-									errorText.substring(0, 1000),
-								);
-							} catch (textError) {
-								console.error("❌ Could not read response body:", textError);
-							}
-						}
-
-						// Log the payload that was sent for debugging
-						console.error("📦 Request payload that failed:", persistPayload);
+						// Log comprehensive error information
+						console.error("❌ Failed to persist evaluation:", errorInfo);
 					} else {
 						console.log("✅ Evaluation persisted successfully");
 					}
 				} catch (persistError) {
-					console.error(
-						"Failed to persist evaluation (non-blocking)",
-						persistError,
-					);
+					console.error("❌ Failed to persist evaluation (non-blocking):", {
+						error:
+							persistError instanceof Error
+								? persistError.message
+								: String(persistError),
+						errorType:
+							persistError instanceof Error
+								? persistError.constructor.name
+								: typeof persistError,
+						stack:
+							persistError instanceof Error ? persistError.stack : undefined,
+					});
 				}
 			} else {
 				throw new Error("Invalid response format from evaluation service");
@@ -1095,6 +1285,40 @@ export default function DrillInterfacePage() {
 								{evaluationData.description}
 							</div>
 						</div>
+					</div>
+					{/* Navigation buttons */}
+					<div className="flex items-center gap-2">
+						{/* Previous Question */}
+						{navigationData?.hasPrev && navigationData.prevQuestionId && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handlePreviousQuestion}
+								disabled={!navigationData?.hasPrev}
+							>
+								<ArrowLeft className="w-4 h-4 mr-2" />
+								Previous
+							</Button>
+						)}
+						{/* View Results/Review */}
+						{evaluationData?.id && (
+							<Button variant="outline" size="sm" onClick={handleViewResults}>
+								<BarChart3 className="w-4 h-4 mr-2" />
+								View Results
+							</Button>
+						)}
+						{/* Next Question */}
+						{navigationData?.hasNext && navigationData.nextQuestionId && (
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={handleNextQuestion}
+								disabled={!navigationData?.hasNext}
+							>
+								Next
+								<ArrowRight className="w-4 h-4 ml-2" />
+							</Button>
+						)}
 					</div>
 				</div>
 
@@ -1354,7 +1578,35 @@ export default function DrillInterfacePage() {
 				)}
 
 				{/* Response Submission or Results */}
-				{evaluationResult ? (
+				{loadingSavedEvaluation ? (
+					<Card>
+						<CardHeader>
+							<Skeleton className="h-6 w-1/3" />
+						</CardHeader>
+						<CardContent className="space-y-6">
+							{/* Score skeleton */}
+							<div className="text-center">
+								<Skeleton className="h-16 w-24 mx-auto mb-2" />
+								<Skeleton className="h-4 w-48 mx-auto" />
+							</div>
+							{/* Category breakdown skeleton */}
+							<div className="space-y-4">
+								<Skeleton className="h-6 w-1/4" />
+								<div className="flex flex-wrap gap-2">
+									{Array.from({ length: 7 }, (_, i) => (
+										// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loaders, order never changes
+										<Skeleton key={i} className="h-8 w-24" />
+									))}
+								</div>
+							</div>
+							{/* Feedback skeleton */}
+							<div className="space-y-2">
+								<Skeleton className="h-6 w-1/3" />
+								<Skeleton className="h-20 w-full" />
+							</div>
+						</CardContent>
+					</Card>
+				) : evaluationResult ? (
 					<>
 						<EvaluationResultDisplay
 							result={evaluationResult}
@@ -1364,6 +1616,42 @@ export default function DrillInterfacePage() {
 								navigationData?.hasNext ? "Next Question" : "Back to Drills"
 							}
 						/>
+
+						{/* Navigation buttons after results */}
+						<Card>
+							<CardContent className="p-4">
+								<div className="flex items-center justify-between gap-4">
+									<div className="flex items-center gap-2">
+										{/* Previous Question */}
+										{navigationData?.hasPrev &&
+											navigationData.prevQuestionId && (
+												<Button
+													variant="outline"
+													onClick={handlePreviousQuestion}
+												>
+													<ArrowLeft className="w-4 h-4 mr-2" />
+													Previous Question
+												</Button>
+											)}
+										{/* Next Question */}
+										{navigationData?.hasNext &&
+											navigationData.nextQuestionId && (
+												<Button variant="outline" onClick={handleNextQuestion}>
+													Next Question
+													<ArrowRight className="w-4 h-4 ml-2" />
+												</Button>
+											)}
+									</div>
+									{/* View Results */}
+									{evaluationData?.id && (
+										<Button variant="default" onClick={handleViewResults}>
+											<BarChart3 className="w-4 h-4 mr-2" />
+											View All Results
+										</Button>
+									)}
+								</div>
+							</CardContent>
+						</Card>
 
 						{/* Additional options at the end of the drill */}
 						{!navigationData?.hasNext && (
@@ -1398,7 +1686,12 @@ export default function DrillInterfacePage() {
 							</Card>
 						)}
 					</>
-				) : !isSubmitting ? (
+				) : !isSubmitting &&
+					!(
+						showResults &&
+						currentSubmission &&
+						currentSubmission.evaluation_status === "completed"
+					) ? (
 					<ResponseSubmission
 						onSubmit={handleSubmit}
 						onError={handleError}

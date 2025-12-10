@@ -25,6 +25,12 @@ This directory contains comprehensive seed data for the Interview Drills applica
   - Additional user progress data
   - Extended analytics data
 
+- **`checklist_templates.sql`** - Checklist templates for coaching tips:
+  - Templates for primary evaluation categories (Clarity, Structure, Content, Delivery)
+  - Alternative category names (Communication, Problem Solving, Technical Accuracy)
+  - Coaching tips organized by category with display order
+  - Uses ON CONFLICT DO NOTHING for idempotency
+
 ## Content Packs Included
 
 ### 1. Software Engineering Fundamentals
@@ -62,6 +68,23 @@ This directory contains comprehensive seed data for the Interview Drills applica
 - **Difficulty**: Intermediate to Advanced
 - **Questions**: 4 marketing questions
 - **Topics**: Channel strategy, campaign design, growth experiments
+
+## Checklist Templates
+
+The `checklist_templates.sql` file seeds coaching tips for evaluation categories:
+
+### Primary Categories
+- **Clarity**: Tips for clear communication and articulation
+- **Structure**: Tips for organizing and structuring responses
+- **Content**: Tips for providing relevant, detailed content
+- **Delivery**: Tips for confident delivery and pacing
+
+### Alternative Categories (for category matching)
+- **Communication**: Maps to Clarity via matching algorithm
+- **Problem Solving**: Maps to Structure/Content via matching algorithm
+- **Technical Accuracy**: Maps to Content via matching algorithm
+
+The category matching algorithm (FR-016) handles case-insensitive matching and fuzzy matching for variations.
 
 ## Sample Users
 
@@ -101,6 +124,18 @@ supabase db reset
 supabase db seed
 ```
 
+The seed files are configured in `supabase/config.toml`:
+```toml
+[db.seed]
+enabled = true
+sql_paths = [
+  './seed.sql',
+  './seeds/content_packs.sql',
+  './seeds/sample_evaluations.sql',
+  './seeds/checklist_templates.sql'
+]
+```
+
 ## Data Characteristics
 
 - **Realistic Responses**: All evaluation responses are written as if by real candidates
@@ -109,6 +144,7 @@ supabase db seed
 - **Time-based Data**: Timestamps are relative to current time for dynamic testing
 - **Status Variety**: Includes completed, processing, and failed evaluations
 - **Progress Tracking**: User progress data shows realistic learning patterns
+- **Idempotency**: All seed files use `ON CONFLICT DO NOTHING` to allow safe re-running
 
 ## Customization
 
@@ -117,21 +153,28 @@ You can modify the seed data by:
 2. Adding new content packs following the JSON schema
 3. Creating additional sample users and evaluations
 4. Adjusting scoring criteria and weights
+5. Adding new checklist templates for additional categories
 
 ## Schema Compliance
 
 All seed data follows the database schema defined in the migration files:
-- Proper foreign key relationships
-- Correct data types and constraints
-- Valid JSON structures for content packs
-- Appropriate enum values for status fields
+- Tables and columns match the current schema
+- Foreign key relationships are respected
+- Data types and constraints are validated
+- RLS policies are considered (seed data may bypass RLS in some cases)
 
-## Testing Scenarios
+## Checklist Templates Location
 
-The seed data supports various testing scenarios:
-- User authentication and authorization
-- Content pack loading and validation
-- Evaluation submission and scoring
-- Progress tracking and analytics
-- System status monitoring
-- Upload queue processing
+**Where checklist items are set:**
+- **Migration**: `supabase/migrations/20251206010000_create_checklist_tables.sql` contains initial seed data (legacy categories)
+- **Seed File**: `supabase/seeds/checklist_templates.sql` contains the primary seed data for actual evaluation categories
+- **Best Practice**: Use the seed file (`checklist_templates.sql`) for adding new checklist items, as it's easier to maintain and follows Supabase seeding best practices
+
+**To add new checklist items:**
+1. Edit `supabase/seeds/checklist_templates.sql`
+2. Add new INSERT statements with appropriate category, item_text, display_order, and is_active values
+3. Run `supabase db seed` to apply changes
+
+**To update existing items:**
+1. Use UPDATE statements in a new migration or seed file
+2. Or manually update via Supabase Dashboard or SQL editor

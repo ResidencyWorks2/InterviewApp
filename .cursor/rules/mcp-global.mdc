@@ -33,15 +33,22 @@ Always use the blessed MCP for its domain unless the Constitution/Context7 plan 
 - Do not parallelize tasks that the plan marks sequential without first updating the Context7 plan to reflect the change.
 - Treat sequential checkpoints (e.g., “STOP and VALIDATE”) as blocking quality gates.
 
-### Serena (Unresolved)
-- Serena is **not** defined in the Constitution or Context7 plans. Treat any request mentioning Serena as a documentation gap.
-- Before integrating, clarify whether Serena is a rename of an existing MCP (e.g., Sentry) or a new provider, update Context7 + Constitution, and only then proceed.
+### Serena (Code Intelligence & Symbolic Editing)
+- Serena provides semantic code analysis and symbolic editing tools for efficient codebase navigation and modification.
+- **Project Management**: `activate_project`, `get_current_config`, `check_onboarding_performed`, `onboarding`
+- **File Operations**: `list_dir`, `find_file`, `read_file` (via standard tools), `read_memory`, `list_memories`, `write_memory`, `edit_memory`, `delete_memory`
+- **Symbol Discovery**: `get_symbols_overview`, `find_symbol`, `find_referencing_symbols`, `search_for_pattern`
+- **Symbolic Editing**: `replace_symbol_body`, `insert_after_symbol`, `insert_before_symbol`, `rename_symbol`
+- **File Editing**: `replace_content` (regex/literal), `search_for_pattern`
+- **Thinking Tools**: `think_about_collected_information`, `think_about_task_adherence`, `think_about_whether_you_are_done`
+- **Workflow**: Prefer Serena's symbolic tools over reading entire files when exploring code. Use `get_symbols_overview` first, then read specific symbol bodies only when needed.
+- Serena tools are token-efficient and should be prioritized for code navigation and editing tasks.
 
 ## 3. Compliance Checklist (run before every PR)
 1. Context7 artifacts synced and gates passed.
 2. Supabase types regenerated (if schema touched) and clients used.
 3. PostHog events scrubbed + required telemetry covered by tests.
 4. Task order respects the latest sequential instructions.
-5. Any “Serena” work blocked until governance documents define it.
+5. Serena tools used appropriately for code navigation and editing (prefer symbolic tools over full file reads).
 
 Failure to satisfy any item blocks merge until resolved.

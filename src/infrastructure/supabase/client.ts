@@ -9,5 +9,15 @@ export function createClient() {
 	return createBrowserClient<Database>(
 		process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+		{
+			auth: {
+				// Enable automatic token refresh to prevent authentication loss
+				autoRefreshToken: true,
+				// Persist session in browser storage
+				persistSession: true,
+				// Detect session in URL (for magic links)
+				detectSessionInUrl: true,
+			},
+		},
 	);
 }

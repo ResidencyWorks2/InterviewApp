@@ -15,16 +15,23 @@ Micro-Checklists provide coaching tips organized by evaluation category. Users c
 1. **Complete an Evaluation**: Submit a response (text or audio) and receive evaluation results
 2. **View Category Chips**: Evaluation results display category chips (e.g., "Communication", "Problem Solving")
 3. **Open Checklist**: Click on any category chip to open the checklist modal
-4. **View Items**: The modal displays coaching tips specific to that category
+4. **Loading State**: While items are being fetched, skeleton loaders are displayed for smooth UX
+5. **View Items**: The modal displays coaching tips specific to that category, ordered by priority
 
 ### Completing Checklist Items
 
 1. **Check Items**: Click on any checklist item to mark it as completed
    - Completed items show a green checkmark and strikethrough text
-   - Progress indicator updates automatically
+   - Progress indicator updates automatically (optimistic UI update)
+   - State is saved to the server in the background
 2. **Uncheck Items**: Click a completed item again to uncheck it
-3. **Track Progress**: View progress bar showing "X / Y completed"
-4. **Persistent State**: Your completions are saved and persist across sessions
+3. **Track Progress**: View progress bar showing "X / Y completed" with visual percentage
+4. **Error Handling**: If saving fails, you'll see a toast notification with a retry option
+   - The UI automatically reverts to the previous state on error
+   - Click "Retry" in the toast to try again
+5. **Rate Limiting**: To prevent abuse, you can complete up to 10 items per minute
+   - If you exceed this limit, you'll see a message indicating when you can try again
+6. **Persistent State**: Your completions are saved and persist across sessions
 
 ### Exporting to Playbook
 
@@ -198,14 +205,16 @@ pnpm test:e2e tests/e2e/checklist
 ### Targets
 
 - **Modal Load**: < 2 seconds (SC-001)
-- **UI Feedback**: < 500ms (SC-002)
+- **UI Feedback**: < 500ms (SC-002) - Achieved via optimistic UI updates
 - **Export**: < 5 seconds (SC-006)
 
 ### Optimization Tips
 
 - Use database indexes (already created)
 - Fetch templates and completions in parallel
-- Use optimistic UI updates for instant feedback
+- Use optimistic UI updates for instant feedback (already implemented)
+- Skeleton loaders provide visual feedback during loading
+- Rate limiting prevents abuse and ensures fair resource usage
 - Cache templates if needed (future optimization)
 
 ## Security
