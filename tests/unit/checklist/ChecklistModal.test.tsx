@@ -16,14 +16,19 @@ vi.mock("@/components/ui/toast", () => ({
 	useToast: () => ({ toast: mockToast }),
 }));
 
-// Mock analytics service
+// Mock analytics service - use module-level variables that can be accessed in both mock and test
 const mockTrack = vi.fn();
 const mockInitializeAnalytics = vi.fn();
+
 vi.mock("@/features/notifications/application/analytics", () => ({
 	analytics: {
-		track: mockTrack,
+		get track() {
+			return mockTrack;
+		},
 	},
-	initializeAnalytics: mockInitializeAnalytics,
+	get initializeAnalytics() {
+		return mockInitializeAnalytics;
+	},
 	ANALYTICS_EVENTS: {
 		CHECKLIST_OPENED: "checklist_opened",
 		CHECKLIST_COMPLETED: "checklist_completed",
@@ -49,6 +54,9 @@ describe("ChecklistModal", () => {
 		(global.fetch as ReturnType<typeof vi.fn>).mockClear();
 		mockTrack.mockClear();
 		mockInitializeAnalytics.mockClear();
+		// Ensure mocks are available to the module
+		(globalThis as any).__checklistModalMockTrack = mockTrack;
+		(globalThis as any).__checklistModalMockInit = mockInitializeAnalytics;
 	});
 
 	describe("Skeleton Loader Display", () => {
@@ -306,11 +314,21 @@ describe("ChecklistModal", () => {
 				expect(screen.getByText("Item 1")).toBeInTheDocument();
 			});
 
-			// Complete first item
-			const item1 = screen.getByText("Item 1").closest("button");
-			if (item1) {
-				fireEvent.click(item1);
+			// Complete first item - find button containing "Item 1" text
+			const item1Text = screen.getByText("Item 1");
+			const item1Button = item1Text.closest("button");
+			if (item1Button) {
+				fireEvent.click(item1Button);
 			}
+
+			// Wait for API call to complete
+			await waitFor(() => {
+				// Should not have completion event yet (only 1 of 2 items completed)
+				const completionCalls = mockTrack.mock.calls.filter(
+					(call) => call[0] === "checklist_completed",
+				);
+				expect(completionCalls.length).toBe(0);
+			});
 
 			// Mock successful toggle for second item
 			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -319,20 +337,24 @@ describe("ChecklistModal", () => {
 			} as Response);
 
 			// Complete second item (should trigger checklist_completed)
-			const item2 = screen.getByText("Item 2").closest("button");
-			if (item2) {
-				fireEvent.click(item2);
+			const item2Text = screen.getByText("Item 2");
+			const item2Button = item2Text.closest("button");
+			if (item2Button) {
+				fireEvent.click(item2Button);
 			}
 
-			await waitFor(() => {
-				expect(mockTrack).toHaveBeenCalledWith("checklist_completed", {
-					evaluation_id: "eval-123",
-					category: "Communication",
-					completion_count: 2,
-					user_id: "user-123",
-					timestamp: expect.any(String),
-				});
-			});
+			await waitFor(
+				() => {
+					expect(mockTrack).toHaveBeenCalledWith("checklist_completed", {
+						evaluation_id: "eval-123",
+						category: "Communication",
+						completion_count: 2,
+						user_id: "user-123",
+						timestamp: expect.any(String),
+					});
+				},
+				{ timeout: 3000 },
+			);
 		});
 
 		it("should handle analytics failures gracefully without blocking user interactions", async () => {
