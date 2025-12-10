@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.2.6/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
 	"vcs": {
 		"enabled": false,
 		"clientKind": "git",
@@ -16,9 +16,11 @@
 			"**/*.md",
 			"**/*.css",
 			"**/*.html",
+			"!playwright-report",
 			"!node_modules",
 			"!dist",
-			"!.next"
+			"!.next",
+			"!coverage"
 		]
 	},
 	"formatter": {
@@ -54,6 +56,11 @@
 	"javascript": {
 		"formatter": {
 			"quoteStyle": "double"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	},
 	"assist": {

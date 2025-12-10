@@ -1,0 +1,35 @@
+# Render Deployment Configuration for BullMQ Worker
+# This file configures worker deployment on Render.com
+
+services:
+  - type: worker
+    name: interview-app-worker
+    env: docker
+    dockerfilePath: ./Dockerfile.worker
+    plan: starter # Change to 'standard' or higher for production
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENV
+        value: production
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.05"
+      - key: POSTHOG_API_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        value: https://us.i.posthog.com

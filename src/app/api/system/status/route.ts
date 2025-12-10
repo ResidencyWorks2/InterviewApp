@@ -7,6 +7,8 @@ import { NextResponse } from "next/server";
 import { healthService } from "@/features/scheduling/infrastructure/monitoring/health-service";
 import { performanceOptimizer } from "@/features/scheduling/infrastructure/scaling/performance-optimizer";
 import { logger } from "@/infrastructure/logging/logger";
+import { contentPackCache } from "@/infrastructure/redis";
+import { createClient } from "@/infrastructure/supabase/server";
 
 /**
  * System status data interface matching the frontend component
@@ -65,14 +67,76 @@ export async function GET(): Promise<NextResponse> {
 			databaseStatus = "disconnected";
 		}
 
-		// Default content pack status (no active content pack)
-		const contentPackStatus = {
+		// Check for active content pack - query database directly for accuracy
+		let contentPackStatus: SystemStatusData["contentPack"] = {
 			isActive: false,
-			name: undefined,
-			version: undefined,
-			activatedAt: undefined,
-			activatedBy: undefined,
 		};
+
+		try {
+			// Query Supabase for activated content packs
+			const supabase = await createClient();
+			const { data: activatedPacks, error: queryError } = await supabase
+				.from("content_packs")
+				.select("id, name, version, activated_at, activated_by")
+				.eq("status", "activated")
+				.order("activated_at", { ascending: false })
+				.limit(1);
+
+			if (!queryError && activatedPacks && activatedPacks.length > 0) {
+				const activePack = activatedPacks[0];
+				contentPackStatus = {
+					isActive: true,
+					name: activePack.name,
+					version: activePack.version,
+					activatedAt: activePack.activated_at || undefined,
+					activatedBy: activePack.activated_by || undefined,
+				};
+
+				logger.info("Active content pack found", {
+					component: "SystemStatusAPI",
+					metadata: {
+						packId: activePack.id,
+						packName: activePack.name,
+						packVersion: activePack.version,
+					},
+				});
+			} else {
+				// Fallback to cache if database query fails or returns no results
+				try {
+					const activeContentPack = await contentPackCache.getActive();
+					if (activeContentPack) {
+						contentPackStatus = {
+							isActive: true,
+							name: activeContentPack.name,
+							version: activeContentPack.version,
+							activatedAt: undefined,
+							activatedBy: undefined,
+						};
+						logger.info("Active content pack found in cache", {
+							component: "SystemStatusAPI",
+						});
+					}
+				} catch (cacheError) {
+					logger.warn("Failed to check content pack cache", {
+						component: "SystemStatusAPI",
+						metadata: {
+							errorMessage:
+								cacheError instanceof Error
+									? cacheError.message
+									: String(cacheError),
+						},
+					});
+				}
+			}
+		} catch (error) {
+			logger.warn("Failed to check content pack status", {
+				component: "SystemStatusAPI",
+				metadata: {
+					errorMessage: error instanceof Error ? error.message : String(error),
+				},
+			});
+			// Continue with default inactive status
+		}
 
 		// Default fallback status (fallback mode is active when no content pack is loaded)
 		const fallbackStatus = {

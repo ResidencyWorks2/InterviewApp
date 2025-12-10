@@ -60,6 +60,12 @@ export function ResponseSubmission({
 				);
 				return;
 			}
+			if (textResponse.length > 2000) {
+				onError?.(
+					new Error("Response exceeds maximum length of 2000 characters"),
+				);
+				return;
+			}
 			onSubmit({
 				type: "text",
 				content: textResponse.trim(),
@@ -79,7 +85,7 @@ export function ResponseSubmission({
 
 	const canSubmit = () => {
 		if (activeTab === "text") {
-			return textResponse.trim().length >= 10;
+			return textResponse.trim().length >= 10 && textResponse.length <= 2000;
 		} else {
 			return audioBlob !== null;
 		}

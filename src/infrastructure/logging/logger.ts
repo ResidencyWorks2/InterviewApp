@@ -1,25 +1,17 @@
-import * as Sentry from "@sentry/nextjs";
+import { captureException } from "@/shared/error/ErrorTrackingService";
 import {
 	type LogContext,
 	type LoggerContract,
 	LogLevel,
 } from "@/shared/logger/types";
-
+import { DataScrubber } from "@/shared/security/data-scrubber";
 /**
  * Structured logger for application-wide logging
  */
 export class Logger implements LoggerContract {
-	private static instance: Logger;
 	private isDevelopment = process.env.NODE_ENV === "development";
 
-	private constructor() {}
-
-	static getInstance(): Logger {
-		if (!Logger.instance) {
-			Logger.instance = new Logger();
-		}
-		return Logger.instance;
-	}
+	constructor() {}
 
 	/**
 	 * Log debug message
@@ -53,12 +45,17 @@ export class Logger implements LoggerContract {
 
 		// Send to Sentry in production
 		if (!this.isDevelopment && error) {
-			Sentry.captureException(error, {
+			// Scrub PII from context metadata before sending to Sentry
+			const scrubbedMetadata = context?.metadata
+				? DataScrubber.scrubObject(context.metadata as Record<string, unknown>)
+				: undefined;
+
+			captureException(error, {
 				tags: {
 					component: context?.component,
 					action: context?.action,
 				},
-				extra: context?.metadata,
+				extra: scrubbedMetadata,
 			});
 		}
 	}
@@ -164,7 +161,6 @@ export class Logger implements LoggerContract {
 	}
 }
 
-// Export singleton instance
-export const logger = Logger.getInstance();
+export const logger = new Logger();
 
 export { type LogContext, LogLevel } from "@/shared/logger/types";

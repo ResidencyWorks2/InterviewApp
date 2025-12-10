@@ -69,8 +69,9 @@ enabled = true
 site_url = "env(NEXT_PUBLIC_APP_URL)"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = ["env(NEXT_PUBLIC_APP_URL)", "http://localhost:3000", "https://localhost:3000"]
-# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604800 (1 week).
-jwt_expiry = 3600
+	# How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604800 (1 week).
+	# Set to 86400 (24 hours) for better user experience while maintaining security
+	jwt_expiry = 86400
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
@@ -247,4 +248,4 @@ backend = "postgres"
 
 [db.seed]
 enabled = true
-sql_paths = ['./seed.sql', './seeds/content_packs.sql', './seeds/sample_evaluations.sql']
+sql_paths = ['./seed.sql', './seeds/content_packs.sql', './seeds/sample_evaluations.sql', './seeds/checklist_templates.sql']

@@ -7,7 +7,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Tables } from "@/types/database";
+import type { Json, Tables } from "@/types/database";
 import {
 	type ContentPack,
 	ContentPackStatus,
@@ -34,8 +34,8 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 				name: contentPack.name,
 				description: contentPack.description ?? null,
 				schema_version: contentPack.schemaVersion,
-				content: contentPack.content as any, // ContentPackData to Json
-				metadata: contentPack.metadata as any, // ContentPackMetadata to Json
+				content: contentPack.content as Json, // ContentPackData to Json
+				metadata: contentPack.metadata as Json, // ContentPackMetadata to Json
 				status: contentPack.status,
 				is_active: contentPack.status === "activated",
 				created_at: contentPack.createdAt.toISOString(),
@@ -82,6 +82,22 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 				}
 				throw new Error(`Failed to find content pack: ${error.message}`);
 			}
+
+			// Add detailed logging to diagnose activation issues
+			console.log(
+				"SupabaseContentPackRepository.findById: Raw data from Supabase:",
+				{
+					id: data.id,
+					name: data.name,
+					status: data.status,
+					hasContent: !!data.content,
+					hasMetadata: !!data.metadata,
+					contentType: typeof data.content,
+					metadataType: typeof data.metadata,
+					contentKeys: data.content ? Object.keys(data.content) : [],
+					metadataKeys: data.metadata ? Object.keys(data.metadata) : [],
+				},
+			);
 
 			return this.mapSupabaseToContentPack(data);
 		} catch (error) {
@@ -148,6 +164,11 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 						id: item.id,
 						name: item.name,
 						status: item.status,
+						hasCreatedAt: !!item.created_at,
+						hasUpdatedAt: !!item.updated_at,
+						hasUploadedBy: item.uploaded_by !== null,
+						hasFileSize: typeof item.file_size === "number",
+						hasChecksum: !!item.checksum,
 					})) || [],
 			});
 
@@ -155,7 +176,40 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 				throw new Error(`Failed to find content packs: ${error.message}`);
 			}
 
-			return data.map((item) => this.mapSupabaseToContentPack(item));
+			// Map records, filtering out any that fail validation
+			const mappedPacks: ContentPack[] = [];
+			for (const item of data) {
+				try {
+					const mapped = this.mapSupabaseToContentPack(item);
+					mappedPacks.push(mapped);
+				} catch (mapError) {
+					console.warn(
+						"SupabaseContentPackRepository: Skipping invalid content pack record:",
+						{
+							id: item.id,
+							name: item.name,
+							error:
+								mapError instanceof Error ? mapError.message : String(mapError),
+							missingFields: {
+								created_at: !item.created_at,
+								updated_at: !item.updated_at,
+								uploaded_by: item.uploaded_by === null,
+								file_size: typeof item.file_size !== "number",
+								checksum: !item.checksum,
+							},
+						},
+					);
+				}
+			}
+
+			console.log(
+				"SupabaseContentPackRepository: Mapped packs:",
+				mappedPacks.length,
+				"out of",
+				data.length,
+			);
+
+			return mappedPacks;
 		} catch (error) {
 			throw new Error(
 				`Repository error: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -207,9 +261,9 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 			if (updates.schemaVersion !== undefined)
 				supabaseUpdates.schema_version = updates.schemaVersion;
 			if (updates.content !== undefined)
-				supabaseUpdates.content = updates.content as any; // ContentPackData to Json
+				supabaseUpdates.content = updates.content as Json; // ContentPackData to Json
 			if (updates.metadata !== undefined)
-				supabaseUpdates.metadata = updates.metadata as any; // ContentPackMetadata to Json
+				supabaseUpdates.metadata = updates.metadata as Json; // ContentPackMetadata to Json
 			if (updates.status !== undefined) supabaseUpdates.status = updates.status;
 			if (updates.activatedAt !== undefined)
 				supabaseUpdates.activated_at =
@@ -295,6 +349,35 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 	}
 
 	/**
+	 * Deactivate all activated content packs
+	 * Sets their status back to 'valid' and clears activation fields
+	 */
+	async deactivateAllActivated(): Promise<number> {
+		try {
+			const { data, error } = await this.supabase
+				.from("content_packs")
+				.update({
+					status: ContentPackStatus.VALID,
+					activated_at: null,
+					activated_by: null,
+					updated_at: new Date().toISOString(),
+				})
+				.eq("status", ContentPackStatus.ACTIVATED)
+				.select("id");
+
+			if (error) {
+				throw new Error(`Failed to deactivate content packs: ${error.message}`);
+			}
+
+			return data?.length || 0;
+		} catch (error) {
+			throw new Error(
+				`Repository error: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
+		}
+	}
+
+	/**
 	 * Checks if a content pack exists by ID
 	 */
 	async exists(id: string): Promise<boolean> {
@@ -358,14 +441,43 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 	 * Maps Supabase data to ContentPack entity
 	 */
 	private mapSupabaseToContentPack(data: SupabaseContentPack): ContentPack {
-		if (
-			!data.created_at ||
-			!data.updated_at ||
-			data.uploaded_by === null ||
-			typeof data.file_size !== "number" ||
-			!data.checksum
-		) {
-			throw new Error("Content pack record is missing required fields");
+		// Validate required fields - throw error if critical fields are missing
+		// This allows the caller to filter out invalid records
+		if (!data.created_at || !data.updated_at) {
+			throw new Error(
+				`Content pack record ${data.id} is missing required timestamp fields`,
+			);
+		}
+
+		if (data.uploaded_by === null) {
+			throw new Error(
+				`Content pack record ${data.id} is missing required uploaded_by field`,
+			);
+		}
+
+		if (typeof data.file_size !== "number") {
+			throw new Error(
+				`Content pack record ${data.id} has invalid file_size (expected number, got ${typeof data.file_size})`,
+			);
+		}
+
+		if (!data.checksum) {
+			throw new Error(
+				`Content pack record ${data.id} is missing required checksum field`,
+			);
+		}
+
+		// Validate content and metadata fields for activation
+		if (!data.content) {
+			console.warn(
+				`Content pack record ${data.id} is missing content field - this will cause validation failures`,
+			);
+		}
+
+		if (!data.metadata) {
+			console.warn(
+				`Content pack record ${data.id} is missing metadata field - this will cause validation failures`,
+			);
 		}
 
 		return {
@@ -374,8 +486,8 @@ export class SupabaseContentPackRepository implements IContentPackRepository {
 			name: data.name,
 			description: data.description ?? undefined,
 			schemaVersion: data.schema_version,
-			content: data.content as any, // Json to ContentPackData
-			metadata: data.metadata as any, // Json to ContentPackMetadata
+			content: data.content as ContentPack["content"], // Json to ContentPackData
+			metadata: data.metadata as ContentPack["metadata"], // Json to ContentPackMetadata
 			status: data.status as ContentPackStatus,
 			createdAt: new Date(data.created_at),
 			updatedAt: new Date(data.updated_at),

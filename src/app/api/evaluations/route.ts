@@ -2,15 +2,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerAuthService } from "@/features/auth/application/services/server-auth-service";
 import { getServerDatabaseService } from "@/infrastructure/db/database-service";
+import { PhiScrubber } from "@/shared/security/phi-scrubber";
 
 const SaveEvaluationSchema = z.object({
-	id: z.string().uuid().optional(),
-	user_id: z.string().uuid().optional(),
-	content_pack_id: z.string().uuid().optional().nullable(),
+	id: z.uuid().optional(),
+	user_id: z.uuid().optional(),
+	question_id: z.string().min(1), // REQUIRED: question_id is critical for stats
+	content_pack_id: z.uuid().optional().nullable(),
 	response_text: z.string().optional(),
-	response_audio_url: z.string().url().optional(),
+	response_audio_url: z.url().optional(),
 	response_type: z.enum(["text", "audio"]),
 	duration_seconds: z.number().int().min(0).optional(),
+	duration_ms: z.number().int().min(0).optional(), // Also accept duration_ms
 	word_count: z.number().int().min(0).optional(),
 	wpm: z.number().min(0).optional(),
 	categories: z.record(z.string(), z.number()),
@@ -56,16 +59,30 @@ export async function POST(request: NextRequest) {
 			| "COMPLETED"
 			| "FAILED";
 
+		// Convert duration_seconds to duration_ms if needed
+		const durationMs = payload.duration_ms
+			? payload.duration_ms
+			: payload.duration_seconds
+				? payload.duration_seconds * 1000
+				: undefined;
+
+		// Scrub PHI from response_text before database insert
+		const scrubbedResponseText = payload.response_text
+			? PhiScrubber.scrubUserInput(payload.response_text)
+			: payload.response_text;
+
 		const db = await getServerDatabaseService();
 
 		const insertPayload = {
 			id: payload.id,
 			user_id: payload.user_id || user.id,
+			question_id: payload.question_id, // CRITICAL: Required for stats calculation
 			content_pack_id: payload.content_pack_id ?? null,
-			response_text: payload.response_text,
+			response_text: scrubbedResponseText,
 			response_audio_url: payload.response_audio_url,
 			response_type: payload.response_type,
 			duration_seconds: payload.duration_seconds ?? null,
+			duration_ms: durationMs ?? null,
 			word_count: payload.word_count ?? null,
 			wpm: payload.wpm ?? null,
 			categories: payload.categories,
@@ -79,13 +96,13 @@ export async function POST(request: NextRequest) {
 		});
 
 		if (!result.success) {
-			return NextResponse.json(
-				{
-					error: "DB_ERROR",
-					message: result.error || "Failed to save evaluation",
-				},
-				{ status: 500 },
-			);
+			const errorResponse = {
+				error: "DB_ERROR",
+				message: result.error || "Failed to save evaluation",
+				details: result.error ? { dbError: result.error } : undefined,
+			};
+			console.error("/api/evaluations POST - Database error:", errorResponse);
+			return NextResponse.json(errorResponse, { status: 500 });
 		}
 
 		return NextResponse.json(
@@ -96,9 +113,22 @@ export async function POST(request: NextRequest) {
 			{ status: 201 },
 		);
 	} catch (error) {
-		console.error("/api/evaluations POST error", error);
+		const errorMessage =
+			error instanceof Error ? error.message : "Unexpected error";
+		const errorStack = error instanceof Error ? error.stack : undefined;
+		console.error("/api/evaluations POST error:", {
+			message: errorMessage,
+			stack: errorStack,
+			errorType: error instanceof Error ? error.constructor.name : typeof error,
+		});
 		return NextResponse.json(
-			{ error: "INTERNAL_SERVER_ERROR", message: "Unexpected error" },
+			{
+				error: "INTERNAL_SERVER_ERROR",
+				message: errorMessage,
+				...(process.env.NODE_ENV === "development" && errorStack
+					? { details: { stack: errorStack } }
+					: {}),
+			},
 			{ status: 500 },
 		);
 	}

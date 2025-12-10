@@ -4,6 +4,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { LayoutShiftPrevention } from "@/components/ui/LayoutShiftPrevention";
+import { ToastProvider } from "@/components/ui/toast";
 import { WebVitals } from "@/components/WebVitals";
 
 export const metadata: Metadata = {
@@ -71,9 +72,11 @@ export default function RootLayout({
 					disableTransitionOnChange
 				>
 					<PostHogProvider>
-						<LayoutShiftPrevention />
-						<WebVitals />
-						<ErrorBoundary>{children}</ErrorBoundary>
+						<ToastProvider>
+							<LayoutShiftPrevention />
+							<WebVitals />
+							<ErrorBoundary>{children}</ErrorBoundary>
+						</ToastProvider>
 					</PostHogProvider>
 				</ThemeProvider>
 			</body>

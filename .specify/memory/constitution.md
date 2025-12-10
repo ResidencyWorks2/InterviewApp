@@ -23,6 +23,8 @@ All code must pass Biome formatting and linting checks. TypeScript must be used 
 
 Apply **Onion Architecture** with **Domain-Driven Design** where applicable: Domain layer (core logic) must remain independent of frameworks and MCPs. Application services should orchestrate flows and remain thin. Interface adapters (e.g., API routes, UI) must use DI to interact with core logic. Avoid service bleed: isolate infrastructure concerns behind clear interfaces.
 
+**Next.js 16 Proxy Migration**: Use `proxy.ts` instead of `middleware.ts` for global request handling. All global middleware logic (auth, rate limiting) must reside in `proxy.ts`.
+
 ### III. Test-First Development (NON-NEGOTIABLE)
 
 Follow test-first approach: Unit test (e.g., Zod schema), Integration test (e.g., Stripe webhook idempotency). Use Vitest for all test files. Code coverage must reach ≥80% for unit + integration tests in M0. TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced.
@@ -30,6 +32,14 @@ Follow test-first approach: Unit test (e.g., Zod schema), Integration test (e.g.
 ### IV. Tooling & Development Standards
 
 Use `pnpm` as the sole package manager. Devcontainer must include: Node.js LTS, `biome` for lint/format, `lefthook` for git hooks. All PRs and commits must pass: `lefthook` pre-commit: biome lint & format, `lefthook` pre-push: type check + tests. No ESLint or Prettier — Biome replaces both.
+
+**MCP Workflow & Tooling (NON-NEGOTIABLE)**:
+
+- Every planning task, architectural decision, or implementation change MUST start by invoking the sequential thinking tool to capture goals, unknowns, and validation steps.
+- Serena semantic tools are the only acceptable interface for code discovery, symbol navigation, refactors, and diffs. Full-file reads happen only when Serena cannot retrieve the necessary context.
+- Context7 lookups are mandatory whenever referencing third-party packages or MCP behavior; cite the latest retrieved documentation (e.g., Model Context Protocol specification 2025-11-25 for `tools/list`, `tools/call`, `tool_use`, `tool_results`, and `execution.taskSupport` semantics).
+- MCP tool usage MUST follow spec-compliant flows: enumerate capabilities via `tools/list`, send schema-conformant `tools/call` payloads, bubble up tool errors verbatim, and re-submit `tool_results` when relaying outputs to the model.
+- Plans, task breakdowns, and implementation notes must explicitly reference the Serena/Context7/MCP steps that were performed so reviewers can trace compliance.
 
 ### V. UX & UI Standards
 

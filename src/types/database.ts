@@ -14,6 +14,71 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			checklist_completions: {
+				Row: {
+					completed_at: string;
+					created_at: string;
+					evaluation_id: string;
+					id: string;
+					template_id: string;
+					user_id: string;
+				};
+				Insert: {
+					completed_at?: string;
+					created_at?: string;
+					evaluation_id: string;
+					id?: string;
+					template_id: string;
+					user_id: string;
+				};
+				Update: {
+					completed_at?: string;
+					created_at?: string;
+					evaluation_id?: string;
+					id?: string;
+					template_id?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "checklist_completions_template_id_fkey";
+						columns: ["template_id"];
+						isOneToOne: false;
+						referencedRelation: "checklist_templates";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			checklist_templates: {
+				Row: {
+					category: string;
+					created_at: string;
+					display_order: number;
+					id: string;
+					is_active: boolean;
+					item_text: string;
+					updated_at: string;
+				};
+				Insert: {
+					category: string;
+					created_at?: string;
+					display_order?: number;
+					id?: string;
+					is_active?: boolean;
+					item_text: string;
+					updated_at?: string;
+				};
+				Update: {
+					category?: string;
+					created_at?: string;
+					display_order?: number;
+					id?: string;
+					is_active?: boolean;
+					item_text?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
 			content_packs: {
 				Row: {
 					activated_at: string | null;
@@ -68,6 +133,48 @@ export type Database = {
 					updated_at?: string | null;
 					uploaded_by?: string | null;
 					version?: string;
+				};
+				Relationships: [];
+			};
+			drill_progress: {
+				Row: {
+					completed_at: string | null;
+					completed_questions: number;
+					created_at: string;
+					current_question_id: string;
+					drill_id: string;
+					id: string;
+					last_activity_at: string;
+					started_at: string;
+					total_questions: number;
+					updated_at: string;
+					user_id: string;
+				};
+				Insert: {
+					completed_at?: string | null;
+					completed_questions?: number;
+					created_at?: string;
+					current_question_id: string;
+					drill_id: string;
+					id?: string;
+					last_activity_at?: string;
+					started_at?: string;
+					total_questions?: number;
+					updated_at?: string;
+					user_id: string;
+				};
+				Update: {
+					completed_at?: string | null;
+					completed_questions?: number;
+					created_at?: string;
+					current_question_id?: string;
+					drill_id?: string;
+					id?: string;
+					last_activity_at?: string;
+					started_at?: string;
+					total_questions?: number;
+					updated_at?: string;
+					user_id?: string;
 				};
 				Relationships: [];
 			};
@@ -142,57 +249,74 @@ export type Database = {
 			};
 			evaluation_results: {
 				Row: {
-					categories: Json;
 					content_pack_id: string | null;
-					created_at: string | null;
-					duration_seconds: number | null;
-					feedback: string | null;
-					id: string;
+					created_at: string;
+					delivery_note: string | null;
+					duration_ms: number;
+					feedback: string;
+					job_id: string;
+					practice_rule: string;
+					question_id: string;
+					request_id: string;
 					response_audio_url: string | null;
 					response_text: string | null;
-					response_type: string;
-					score: number | null;
-					status: Database["public"]["Enums"]["evaluation_status"] | null;
-					updated_at: string | null;
-					user_id: string;
-					word_count: number | null;
-					wpm: number | null;
+					response_type: string | null;
+					score: number;
+					tokens_used: number | null;
+					transcription: string | null;
+					updated_at: string;
+					user_id: string | null;
+					what_changed: string;
 				};
 				Insert: {
-					categories?: Json;
 					content_pack_id?: string | null;
-					created_at?: string | null;
-					duration_seconds?: number | null;
-					feedback?: string | null;
-					id?: string;
+					created_at?: string;
+					delivery_note?: string | null;
+					duration_ms: number;
+					feedback: string;
+					job_id: string;
+					practice_rule: string;
+					question_id?: string;
+					request_id: string;
 					response_audio_url?: string | null;
 					response_text?: string | null;
-					response_type: string;
-					score?: number | null;
-					status?: Database["public"]["Enums"]["evaluation_status"] | null;
-					updated_at?: string | null;
-					user_id: string;
-					word_count?: number | null;
-					wpm?: number | null;
+					response_type?: string | null;
+					score: number;
+					tokens_used?: number | null;
+					transcription?: string | null;
+					updated_at?: string;
+					user_id?: string | null;
+					what_changed: string;
 				};
 				Update: {
-					categories?: Json;
 					content_pack_id?: string | null;
-					created_at?: string | null;
-					duration_seconds?: number | null;
-					feedback?: string | null;
-					id?: string;
+					created_at?: string;
+					delivery_note?: string | null;
+					duration_ms?: number;
+					feedback?: string;
+					job_id?: string;
+					practice_rule?: string;
+					question_id?: string;
+					request_id?: string;
 					response_audio_url?: string | null;
 					response_text?: string | null;
-					response_type?: string;
-					score?: number | null;
-					status?: Database["public"]["Enums"]["evaluation_status"] | null;
-					updated_at?: string | null;
-					user_id?: string;
-					word_count?: number | null;
-					wpm?: number | null;
+					response_type?: string | null;
+					score?: number;
+					tokens_used?: number | null;
+					transcription?: string | null;
+					updated_at?: string;
+					user_id?: string | null;
+					what_changed?: string;
 				};
-				Relationships: [];
+				Relationships: [
+					{
+						foreignKeyName: "evaluation_results_content_pack_id_fkey";
+						columns: ["content_pack_id"];
+						isOneToOne: false;
+						referencedRelation: "content_packs";
+						referencedColumns: ["id"];
+					},
+				];
 			};
 			evaluation_scores: {
 				Row: {
@@ -231,6 +355,197 @@ export type Database = {
 						referencedColumns: ["id"];
 					},
 				];
+			};
+			question_submissions: {
+				Row: {
+					content_pack_id: string | null;
+					created_at: string;
+					drill_id: string;
+					evaluation_completed_at: string | null;
+					evaluation_job_id: string | null;
+					evaluation_request_id: string | null;
+					evaluation_status: string | null;
+					id: string;
+					question_id: string;
+					response_audio_url: string | null;
+					response_text: string | null;
+					response_type: string;
+					submitted_at: string;
+					updated_at: string;
+					user_id: string;
+				};
+				Insert: {
+					content_pack_id?: string | null;
+					created_at?: string;
+					drill_id: string;
+					evaluation_completed_at?: string | null;
+					evaluation_job_id?: string | null;
+					evaluation_request_id?: string | null;
+					evaluation_status?: string | null;
+					id?: string;
+					question_id: string;
+					response_audio_url?: string | null;
+					response_text?: string | null;
+					response_type: string;
+					submitted_at?: string;
+					updated_at?: string;
+					user_id: string;
+				};
+				Update: {
+					content_pack_id?: string | null;
+					created_at?: string;
+					drill_id?: string;
+					evaluation_completed_at?: string | null;
+					evaluation_job_id?: string | null;
+					evaluation_request_id?: string | null;
+					evaluation_status?: string | null;
+					id?: string;
+					question_id?: string;
+					response_audio_url?: string | null;
+					response_text?: string | null;
+					response_type?: string;
+					submitted_at?: string;
+					updated_at?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "question_submissions_content_pack_id_fkey";
+						columns: ["content_pack_id"];
+						isOneToOne: false;
+						referencedRelation: "content_packs";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			recordings: {
+				Row: {
+					created_at: string;
+					duration: number | null;
+					error_message: string | null;
+					expires_at: string;
+					file_name: string | null;
+					file_size: number | null;
+					id: string;
+					mime_type: string | null;
+					question_id: string;
+					recorded_at: string;
+					response_type: string;
+					session_id: string;
+					status: string;
+					storage_path: string | null;
+					text_content: string | null;
+					updated_at: string;
+					upload_attempts: number;
+					upload_duration_ms: number | null;
+					uploaded_at: string;
+					user_id: string;
+				};
+				Insert: {
+					created_at?: string;
+					duration?: number | null;
+					error_message?: string | null;
+					expires_at: string;
+					file_name?: string | null;
+					file_size?: number | null;
+					id?: string;
+					mime_type?: string | null;
+					question_id: string;
+					recorded_at: string;
+					response_type?: string;
+					session_id: string;
+					status: string;
+					storage_path?: string | null;
+					text_content?: string | null;
+					updated_at?: string;
+					upload_attempts?: number;
+					upload_duration_ms?: number | null;
+					uploaded_at: string;
+					user_id: string;
+				};
+				Update: {
+					created_at?: string;
+					duration?: number | null;
+					error_message?: string | null;
+					expires_at?: string;
+					file_name?: string | null;
+					file_size?: number | null;
+					id?: string;
+					mime_type?: string | null;
+					question_id?: string;
+					recorded_at?: string;
+					response_type?: string;
+					session_id?: string;
+					status?: string;
+					storage_path?: string | null;
+					text_content?: string | null;
+					updated_at?: string;
+					upload_attempts?: number;
+					upload_duration_ms?: number | null;
+					uploaded_at?: string;
+					user_id?: string;
+				};
+				Relationships: [];
+			};
+			streaming_tips: {
+				Row: {
+					category: string | null;
+					created_at: string;
+					created_by: string | null;
+					display_order: number | null;
+					id: string;
+					is_active: boolean | null;
+					tip_text: string;
+					updated_at: string;
+				};
+				Insert: {
+					category?: string | null;
+					created_at?: string;
+					created_by?: string | null;
+					display_order?: number | null;
+					id?: string;
+					is_active?: boolean | null;
+					tip_text: string;
+					updated_at?: string;
+				};
+				Update: {
+					category?: string | null;
+					created_at?: string;
+					created_by?: string | null;
+					display_order?: number | null;
+					id?: string;
+					is_active?: boolean | null;
+					tip_text?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
+			system_status: {
+				Row: {
+					details: Json | null;
+					id: string;
+					last_updated: string | null;
+					status_type: string;
+					status_value: string;
+					updated_by: string | null;
+				};
+				Insert: {
+					details?: Json | null;
+					id?: string;
+					last_updated?: string | null;
+					status_type: string;
+					status_value: string;
+					updated_by?: string | null;
+				};
+				Update: {
+					details?: Json | null;
+					id?: string;
+					last_updated?: string | null;
+					status_type?: string;
+					status_value?: string;
+					updated_by?: string | null;
+				};
+				Relationships: [];
 			};
 			upload_queue: {
 				Row: {
@@ -283,6 +598,7 @@ export type Database = {
 					entitlement_level: Database["public"]["Enums"]["user_entitlement_level"];
 					expires_at: string;
 					id: string;
+					stripe_event_id: string | null;
 					updated_at: string | null;
 					user_id: string;
 				};
@@ -291,6 +607,7 @@ export type Database = {
 					entitlement_level: Database["public"]["Enums"]["user_entitlement_level"];
 					expires_at: string;
 					id?: string;
+					stripe_event_id?: string | null;
 					updated_at?: string | null;
 					user_id: string;
 				};
@@ -299,6 +616,7 @@ export type Database = {
 					entitlement_level?: Database["public"]["Enums"]["user_entitlement_level"];
 					expires_at?: string;
 					id?: string;
+					stripe_event_id?: string | null;
 					updated_at?: string | null;
 					user_id?: string;
 				};
@@ -494,10 +812,51 @@ export type Database = {
 					validation_time_ms?: number;
 					warnings?: Json | null;
 				};
-				Relationships: [];
+				Relationships: [
+					{
+						foreignKeyName: "validation_results_content_pack_id_fkey";
+						columns: ["content_pack_id"];
+						isOneToOne: true;
+						referencedRelation: "content_packs";
+						referencedColumns: ["id"];
+					},
+				];
 			};
 		};
 		Views: {
+			current_system_status: {
+				Row: {
+					details: Json | null;
+					last_updated: string | null;
+					status_type: string | null;
+					status_value: string | null;
+					updated_by: string | null;
+				};
+				Insert: {
+					details?: Json | null;
+					last_updated?: string | null;
+					status_type?: string | null;
+					status_value?: string | null;
+					updated_by?: string | null;
+				};
+				Update: {
+					details?: Json | null;
+					last_updated?: string | null;
+					status_type?: string | null;
+					status_value?: string | null;
+					updated_by?: string | null;
+				};
+				Relationships: [];
+			};
+			system_health_dashboard: {
+				Row: {
+					component: string | null;
+					last_updated: string | null;
+					message: string | null;
+					status: string | null;
+				};
+				Relationships: [];
+			};
 			upload_stats_by_user: {
 				Row: {
 					avg_file_size: number | null;
@@ -513,6 +872,32 @@ export type Database = {
 					validating_uploads: number | null;
 				};
 				Relationships: [];
+			};
+			validation_results_with_details: {
+				Row: {
+					content_pack_id: string | null;
+					content_pack_name: string | null;
+					content_pack_version: string | null;
+					created_at: string | null;
+					errors: Json | null;
+					id: string | null;
+					is_valid: boolean | null;
+					schema_version: string | null;
+					updated_at: string | null;
+					validated_at: string | null;
+					validated_by: string | null;
+					validation_time_ms: number | null;
+					warnings: Json | null;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "validation_results_content_pack_id_fkey";
+						columns: ["content_pack_id"];
+						isOneToOne: true;
+						referencedRelation: "content_packs";
+						referencedColumns: ["id"];
+					},
+				];
 			};
 			validation_stats_by_schema: {
 				Row: {
@@ -541,12 +926,10 @@ export type Database = {
 				Args: { exclude_id: string };
 				Returns: number;
 			};
-			cleanup_old_uploads: {
-				Args: { days_to_keep?: number };
-				Returns: number;
-			};
+			cleanup_old_system_status: { Args: never; Returns: undefined };
+			cleanup_old_uploads: { Args: { days_to_keep?: number }; Returns: number };
 			get_active_content_pack: {
-				Args: Record<PropertyKey, never>;
+				Args: never;
 				Returns: {
 					activated_at: string;
 					activated_by: string;
@@ -588,6 +971,28 @@ export type Database = {
 					warnings: Json;
 				}[];
 			};
+			get_questions_by_specialty: {
+				Args: { limit_count?: number; target_specialty: string };
+				Returns: {
+					evaluation_id: string;
+					evaluation_title: string;
+					question_id: string;
+					question_specialty: string;
+					question_text: string;
+					question_type: string;
+				}[];
+			};
+			get_system_health_summary: { Args: never; Returns: Json };
+			get_system_status: {
+				Args: never;
+				Returns: {
+					details: Json;
+					last_updated: string;
+					status_type: string;
+					status_value: string;
+					updated_by: string;
+				}[];
+			};
 			get_upload_history: {
 				Args: { limit_count?: number; user_uuid: string };
 				Returns: {
@@ -603,7 +1008,7 @@ export type Database = {
 				}[];
 			};
 			get_upload_statistics: {
-				Args: Record<PropertyKey, never>;
+				Args: never;
 				Returns: {
 					avg_file_size: number;
 					completed_uploads: number;
@@ -616,6 +1021,7 @@ export type Database = {
 					validating_uploads: number;
 				}[];
 			};
+			get_user_email_safe: { Args: { user_uuid: string }; Returns: string };
 			get_validation_history: {
 				Args: { limit_count?: number; pack_id: string };
 				Returns: {
@@ -630,7 +1036,7 @@ export type Database = {
 				}[];
 			};
 			get_validation_statistics: {
-				Args: Record<PropertyKey, never>;
+				Args: never;
 				Returns: {
 					avg_validation_time_ms: number;
 					failed_validations: number;
@@ -641,6 +1047,15 @@ export type Database = {
 					successful_validations: number;
 					total_validations: number;
 				}[];
+			};
+			update_system_status: {
+				Args: {
+					p_details?: Json;
+					p_status_type: string;
+					p_status_value: string;
+					p_updated_by?: string;
+				};
+				Returns: undefined;
 			};
 			update_upload_status: {
 				Args: {
