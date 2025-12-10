@@ -5,6 +5,7 @@ import type {
 	EvaluationResult,
 } from "../../domain/evaluation/ai-evaluation-schema";
 import { EvaluationResultSchema } from "../../domain/evaluation/ai-evaluation-schema";
+import { logger } from "../logging/logger";
 import { evaluateTranscript } from "../openai/gpt_evaluator";
 import { transcribeAudio } from "../openai/whisper";
 import { captureEvent } from "../posthog";
@@ -40,11 +41,15 @@ if (sentryEnabled && !_sentryClient) {
 	sentryExtended.configureScope?.((scope) =>
 		scope.setTag?.("component", "evaluation-worker"),
 	);
-	console.log("[Worker] Sentry initialized for evaluation worker");
+	logger.info("Sentry initialized for evaluation worker", {
+		component: "evaluation-worker",
+		action: "sentry-init",
+	});
 } else if (!sentryEnabled) {
-	console.warn(
-		"[Worker] Sentry disabled: SENTRY_DSN not provided in environment",
-	);
+	logger.warn("Sentry disabled: SENTRY_DSN not provided in environment", {
+		component: "evaluation-worker",
+		action: "sentry-init",
+	});
 }
 
 const flushSentry = async () => {
@@ -61,13 +66,22 @@ const flushSentry = async () => {
 			await sentryExtended.flush(2000);
 		}
 	} catch (flushError) {
-		console.error("[Worker] Failed to flush Sentry events", flushError);
+		const error =
+			flushError instanceof Error ? flushError : new Error(String(flushError));
+		logger.error("Failed to flush Sentry events", error, {
+			component: "evaluation-worker",
+			action: "sentry-flush",
+		});
 	}
 };
 
 ["SIGTERM", "SIGINT"].forEach((signal) => {
 	process.on(signal, async () => {
-		console.log(`[Worker] Received ${signal}, shutting down gracefully`);
+		logger.info(`Received ${signal}, shutting down gracefully`, {
+			component: "evaluation-worker",
+			action: "shutdown",
+			metadata: { signal },
+		});
 		await flushSentry();
 		process.exit(0);
 	});
@@ -83,15 +97,27 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 		const startTime = Date.now();
 		const { requestId, text, audio_url, userId, metadata } = job.data;
 
-		console.log(`[Worker] Processing job ${job.id} for request ${requestId}`);
+		logger.info("Processing evaluation job", {
+			component: "evaluation-worker",
+			action: "process-job",
+			requestId,
+			metadata: {
+				jobId: job.id,
+				hasText: !!text,
+				hasAudio: !!audio_url,
+			},
+		});
 
 		try {
 			// T022: Idempotency guard - check if already processed
 			const existingResult = await getByRequestId(requestId);
 			if (existingResult) {
-				console.log(
-					`[Worker] Request ${requestId} already processed, skipping`,
-				);
+				logger.info("Request already processed, returning cached result", {
+					component: "evaluation-worker",
+					action: "idempotency-check",
+					requestId,
+					metadata: { jobId: job.id },
+				});
 
 				// Emit events with cached data
 				captureEvent("job_completed", {
@@ -116,13 +142,21 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 
 			// T018: Transcribe audio if provided
 			if (audio_url && !text) {
-				console.log(`[Worker] Transcribing audio from ${audio_url}`);
+				logger.info("Transcribing audio", {
+					component: "evaluation-worker",
+					action: "transcribe-audio",
+					requestId,
+					metadata: { audioUrl: audio_url },
+				});
 				const transcriptionResult = await transcribeAudio(audio_url);
 				transcript = transcriptionResult.transcript;
 				transcriptionDurationMs = transcriptionResult.durationMs;
-				console.log(
-					`[Worker] Transcription completed in ${transcriptionDurationMs}ms`,
-				);
+				logger.info("Transcription completed", {
+					component: "evaluation-worker",
+					action: "transcribe-audio",
+					requestId,
+					metadata: { durationMs: transcriptionDurationMs },
+				});
 			}
 
 			// Validate transcript exists
@@ -131,13 +165,22 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 			}
 
 			// T019: Evaluate with GPT-4
-			console.log(
-				`[Worker] Evaluating transcript (${transcript.length} chars)`,
-			);
+			logger.info("Evaluating transcript", {
+				component: "evaluation-worker",
+				action: "evaluate-transcript",
+				requestId,
+				metadata: { transcriptLength: transcript.length },
+			});
 			const evaluation = await evaluateTranscript(transcript);
-			console.log(
-				`[Worker] Evaluation completed: score=${evaluation.score}, tokens=${evaluation.tokensUsed ?? "N/A"}`,
-			);
+			logger.info("Evaluation completed", {
+				component: "evaluation-worker",
+				action: "evaluate-transcript",
+				requestId,
+				metadata: {
+					score: evaluation.score,
+					tokensUsed: evaluation.tokensUsed ?? null,
+				},
+			});
 
 			// Calculate total duration
 			const durationMs = Date.now() - startTime;
@@ -160,7 +203,12 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 
 			// Persist to database
 			await upsertResult(result, userId ?? null, metadata);
-			console.log(`[Worker] Result persisted for request ${requestId}`);
+			logger.info("Result persisted to database", {
+				component: "evaluation-worker",
+				action: "persist-result",
+				requestId,
+				userId: userId ?? undefined,
+			});
 
 			// Emit analytics events
 			captureEvent("job_completed", {
@@ -179,11 +227,29 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 				cached: false,
 			});
 
-			console.log(`[Worker] Job ${job.id} completed successfully`);
+			logger.info("Job completed successfully", {
+				component: "evaluation-worker",
+				action: "job-completed",
+				requestId,
+				metadata: {
+					jobId: job.id,
+					durationMs: Date.now() - startTime,
+				},
+			});
 			return result;
 		} catch (error) {
 			const durationMs = Date.now() - startTime;
-			console.error(`[Worker] Job ${job.id} failed:`, error);
+			const errorObj =
+				error instanceof Error ? error : new Error(String(error));
+			logger.error("Job failed", errorObj, {
+				component: "evaluation-worker",
+				action: "job-failed",
+				requestId,
+				metadata: {
+					jobId: job.id,
+					durationMs,
+				},
+			});
 
 			// Capture error in Sentry
 			Sentry.captureException(error, {
@@ -221,17 +287,32 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 
 // Handle worker events
 evaluationWorker.on("completed", (job) => {
-	console.log(`[Worker] Job ${job.id} completed`);
+	logger.info("Worker event: job completed", {
+		component: "evaluation-worker",
+		action: "worker-event",
+		metadata: { jobId: job.id },
+	});
 });
 
 evaluationWorker.on("failed", (job, err) => {
-	console.error(`[Worker] Job ${job?.id} failed:`, err);
+	const error = err instanceof Error ? err : new Error(String(err));
+	logger.error("Worker event: job failed", error, {
+		component: "evaluation-worker",
+		action: "worker-event",
+		metadata: { jobId: job?.id },
+	});
 });
 
 evaluationWorker.on("error", (err) => {
-	console.error("[Worker] Worker error:", err);
+	const error = err instanceof Error ? err : new Error(String(err));
+	logger.error("Worker error", error, {
+		component: "evaluation-worker",
+		action: "worker-error",
+	});
 });
 
-console.log(
-	`[Worker] Evaluation worker started, listening to queue: ${EVALUATION_QUEUE_NAME}`,
-);
+logger.info("Evaluation worker started", {
+	component: "evaluation-worker",
+	action: "worker-start",
+	metadata: { queueName: EVALUATION_QUEUE_NAME },
+});

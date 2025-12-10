@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { ContentPackMissingBanner } from "@/components/content/ContentPackMissingBanner";
+import { PrivacyCopy } from "@/components/privacy/PrivacyCopy";
+import { PrivacyDataBadge } from "@/components/privacy/PrivacyDataBadge";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -142,11 +144,17 @@ export default function DashboardLayout({
 			{/* Footer */}
 			<footer className="bg-card border-t border-border mt-12">
 				<div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-					<div className="text-center text-sm text-muted-foreground">
-						<p>
-							&copy; {new Date().getFullYear()} InterviewPrep. All rights
-							reserved.
-						</p>
+					<div className="flex flex-col items-center gap-4">
+						<div className="flex items-center gap-4">
+							<PrivacyCopy />
+							<PrivacyDataBadge />
+						</div>
+						<div className="text-center text-sm text-muted-foreground">
+							<p>
+								&copy; {new Date().getFullYear()} InterviewPrep. All rights
+								reserved.
+							</p>
+						</div>
 					</div>
 				</div>
 			</footer>

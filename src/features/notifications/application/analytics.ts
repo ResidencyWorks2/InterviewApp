@@ -443,6 +443,12 @@ export const ANALYTICS_EVENTS = {
 	USER_LOGIN: "user_login",
 	USER_LOGOUT: "user_logout",
 	USER_SIGNUP: "user_signup",
+
+	// Confidence cues & analytics events
+	SPECIALTY_CUE_HIT: "specialty_cue_hit",
+	CHECKLIST_OPENED: "checklist_opened",
+	CHECKLIST_COMPLETED: "checklist_completed",
+	PD_VERIFY_CLICKED: "pd_verify_clicked",
 } as const;
 
 /**

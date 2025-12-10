@@ -72,6 +72,20 @@ EVALUATION_WEBHOOK_SECRET=change-me
 See `specs/001-ai-asr-eval/spec.md` for contract examples and polling/webhook behavior.
 ```
 
+## Privacy & Trust Indicators
+
+The application includes privacy and trust indicators to build user confidence:
+
+- **Privacy Copy**: Brief privacy and data protection information displayed in the footer on dashboard and drill pages
+- **Privacy Data (PD) Badge**: Clickable badge linking to the privacy policy page (`/privacy`)
+- **Analytics Events**: User interactions are tracked with privacy-preserving analytics:
+  - `specialty_cue_hit`: Fired when specialty badge is displayed on drill pages
+  - `checklist_opened`: Fired when checklist modal is opened
+  - `checklist_completed`: Fired when all checklist items in a category are completed
+  - `pd_verify_clicked`: Fired when privacy badge is clicked
+
+All analytics events are scrubbed for PII (personally identifiable information) before transmission to PostHog. User IDs are anonymized (UUIDs, not email addresses).
+
 ## Day-3 Demo Flow
 
 ### 1. Navigate to Practice
