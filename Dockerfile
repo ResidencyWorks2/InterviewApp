@@ -3,6 +3,9 @@
 
 FROM node:22-alpine AS base
 
+# Install git (required for lefthook postinstall script)
+RUN apk add --no-cache git
+
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
