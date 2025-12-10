@@ -53,11 +53,14 @@ This guide covers migrating both the Next.js application and BullMQ worker to Ra
 
 Railway will auto-detect the `Dockerfile` in the root and create the app service.
 
-1. Railway auto-detects `Dockerfile` → Creates App service
-2. Service name: `app` (or your preferred name)
-3. Railway will build and deploy automatically
+1. In Railway project, click "New Service"
+2. Select "GitHub Repo" → Same repository
+3. Railway will auto-detect `Dockerfile` → Creates App service
+   - **OR** if Railway doesn't auto-detect, go to service Settings → set "Railway Config File" to `/railway.app.json`
+4. Service name: `app` (or your preferred name)
+5. Railway will build and deploy automatically
 
-**Note**: Railway uses the Dockerfile in root. The `next.config.js` already has `output: "standalone"` configured, which is required for Railway.
+**Note**: Railway uses the Dockerfile in root. The `next.config.js` already has `output: "standalone"` configured, which is required for Railway. A `railway.app.json` config file is available if Railway doesn't auto-detect the Dockerfile.
 
 ### Step 3: Configure Worker Service
 
