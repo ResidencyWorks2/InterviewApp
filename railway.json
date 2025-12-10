@@ -5,7 +5,7 @@
 		"dockerfilePath": "Dockerfile.worker"
 	},
 	"deploy": {
-		"startCommand": "NODE_ENV=production tsx --env-file=.env.local src/infrastructure/bullmq/worker.ts",
+		"startCommand": "node dist/worker.js",
 		"restartPolicyType": "ON_FAILURE",
 		"restartPolicyMaxRetries": 10
 	}

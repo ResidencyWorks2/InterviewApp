@@ -14,7 +14,7 @@ const rootDir = resolve(__dirname, "..");
 
 try {
 	await build({
-		entryPoints: ["src/infrastructure/bullmq/worker.ts"],
+		entryPoints: ["src/infrastructure/bullmq/worker-entrypoint.ts"],
 		bundle: true,
 		platform: "node",
 		target: "node22",
