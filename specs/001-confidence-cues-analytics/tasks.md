@@ -116,9 +116,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Add `checklist_opened` event tracking to ChecklistModal in `src/components/drill/ChecklistModal.tsx` - fire event when modal opens (open prop changes to true), include anonymized user_id, evaluation_id, category, timestamp
-- [ ] T027 [US3] Add `checklist_completed` event tracking to ChecklistModal in `src/components/drill/ChecklistModal.tsx` - fire event immediately when toggle action results in 100% completion (all items checked), include anonymized user_id, evaluation_id, category, completion_count, timestamp
-- [ ] T028 [US3] Add error handling for checklist tracking in `src/components/drill/ChecklistModal.tsx` - gracefully handle analytics service failures (non-blocking), ensure events don't block user interactions
+- [x] T026 [US3] Add `checklist_opened` event tracking to ChecklistModal in `src/components/drill/ChecklistModal.tsx` - fire event when modal opens (open prop changes to true), include anonymized user_id, evaluation_id, category, timestamp
+- [x] T027 [US3] Add `checklist_completed` event tracking to ChecklistModal in `src/components/drill/ChecklistModal.tsx` - fire event immediately when toggle action results in 100% completion (all items checked), include anonymized user_id, evaluation_id, category, completion_count, timestamp
+- [x] T028 [US3] Add error handling for checklist tracking in `src/components/drill/ChecklistModal.tsx` - gracefully handle analytics service failures (non-blocking), ensure events don't block user interactions
 
 **Checkpoint**: At this point, User Story 3 should be fully functional and testable independently. Checklist events fire correctly on modal open and completion.
 
@@ -142,8 +142,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] Add `pd_verify_clicked` event tracking to PrivacyDataBadge in `src/components/privacy/PrivacyDataBadge.tsx` - fire event on badge click (before navigation), include anonymized user_id, timestamp
-- [ ] T033 [US4] Add error handling for PD badge tracking in `src/components/privacy/PrivacyDataBadge.tsx` - gracefully handle analytics service failures (non-blocking), ensure event doesn't block navigation
+- [x] T032 [US4] Add `pd_verify_clicked` event tracking to PrivacyDataBadge in `src/components/privacy/PrivacyDataBadge.tsx` - fire event on badge click (before navigation), include anonymized user_id, timestamp
+- [x] T033 [US4] Add error handling for PD badge tracking in `src/components/privacy/PrivacyDataBadge.tsx` - gracefully handle analytics service failures (non-blocking), ensure event doesn't block navigation
 
 **Checkpoint**: At this point, User Story 4 should be fully functional and testable independently. PD badge click events fire correctly.
 
@@ -158,7 +158,7 @@
 - [ ] T036 [P] Verify privacy indicators are accessible and functional on mobile, tablet, and desktop viewports - responsive design testing
 - [ ] T037 [P] Update documentation in `README.md` if needed - document privacy indicators and analytics events
 - [ ] T038 [P] Run quickstart.md validation - verify all implementation steps from quickstart.md are complete
-- [ ] T039 Code cleanup and refactoring - ensure all code follows Onion Architecture boundaries, Biome formatting
+- [x] T039 Code cleanup and refactoring - ensure all code follows Onion Architecture boundaries, Biome formatting
 - [ ] T040 [P] Performance validation - verify privacy indicators visible within 2 seconds (SC-001), analytics tracking adds <50ms latency
 - [ ] T041 [P] Security validation - verify 100% of analytics events pass PII scrubbing (SC-006), verify no PII in PostHog events
 

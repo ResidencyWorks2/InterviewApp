@@ -12,6 +12,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
+import {
+	ANALYTICS_EVENTS,
+	analytics,
+	initializeAnalytics,
+} from "@/features/notifications/application/analytics";
+import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/shared/utils";
 
 export interface ChecklistItem {
@@ -62,6 +68,8 @@ export function ChecklistModal({
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
 	const { toast } = useToast();
+	const { user } = useAuth();
+	const checklistOpenedTrackedRef = React.useRef(false);
 
 	// Fetch checklist items when modal opens
 	const fetchChecklistItems = React.useCallback(async () => {
@@ -119,18 +127,62 @@ export function ChecklistModal({
 		}
 	}, [open, evaluationId, fetchChecklistItems]);
 
+	// Track checklist_opened event when modal opens (once per open)
+	React.useEffect(() => {
+		if (open && evaluationId && !checklistOpenedTrackedRef.current) {
+			try {
+				initializeAnalytics();
+				analytics.track(ANALYTICS_EVENTS.CHECKLIST_OPENED, {
+					evaluation_id: evaluationId,
+					category,
+					user_id: user?.id || "anonymous",
+					timestamp: new Date().toISOString(),
+				});
+				checklistOpenedTrackedRef.current = true;
+			} catch (error) {
+				// Analytics failures should not block user interactions
+				console.error("Failed to track checklist_opened event:", error);
+			}
+		}
+		// Reset tracking ref when modal closes
+		if (!open) {
+			checklistOpenedTrackedRef.current = false;
+		}
+	}, [open, evaluationId, category, user]);
+
 	const toggleItem = async (itemId: string, currentlyCompleted: boolean) => {
 		try {
 			const newCompletedState = !currentlyCompleted;
 
 			// Optimistically update UI
-			setChecklistItems((prev) =>
-				prev.map((item) =>
-					item.id === itemId
-						? { ...item, is_completed: newCompletedState }
-						: item,
-				),
+			const updatedItems = checklistItems.map((item) =>
+				item.id === itemId
+					? { ...item, is_completed: newCompletedState }
+					: item,
 			);
+			setChecklistItems(updatedItems);
+
+			// Check if all items are now completed (100% completion)
+			const allCompleted =
+				updatedItems.length > 0 &&
+				updatedItems.every((item) => item.is_completed);
+
+			// Track checklist_completed event immediately when 100% completion is reached
+			if (allCompleted) {
+				try {
+					initializeAnalytics();
+					analytics.track(ANALYTICS_EVENTS.CHECKLIST_COMPLETED, {
+						evaluation_id: evaluationId,
+						category,
+						completion_count: updatedItems.length,
+						user_id: user?.id || "anonymous",
+						timestamp: new Date().toISOString(),
+					});
+				} catch (error) {
+					// Analytics failures should not block user interactions
+					console.error("Failed to track checklist_completed event:", error);
+				}
+			}
 
 			// Call API to persist change
 			const response = await fetch("/api/checklist/complete", {

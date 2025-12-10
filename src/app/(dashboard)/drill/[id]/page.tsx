@@ -449,8 +449,7 @@ export default function DrillInterfacePage() {
 		// 2. Specialty exists and is not "general"
 		// 3. Not already tracked for this page view
 		if (
-			questionData &&
-			questionData.drill_specialty &&
+			questionData?.drill_specialty &&
 			questionData.drill_specialty !== "general" &&
 			!specialtyTrackedRef.current
 		) {
