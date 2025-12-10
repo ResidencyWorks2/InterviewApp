@@ -127,8 +127,27 @@ function validateEnv() {
 			const missingVars = error.issues.map(
 				(err) => `${err.path.join(".")}: ${err.message}`,
 			);
+
+			// Debug: Log available environment variables (filtered for security)
+			const availableEnvKeys = Object.keys(process.env)
+				.filter(
+					(key) =>
+						key.includes("SUPABASE") ||
+						key.includes("REDIS") ||
+						key.includes("OPENAI") ||
+						key.includes("POSTHOG") ||
+						key.includes("SENTRY") ||
+						key === "NODE_ENV",
+				)
+				.sort();
+
+			const debugInfo =
+				availableEnvKeys.length > 0
+					? `\n\nAvailable environment variables (filtered): ${availableEnvKeys.join(", ")}`
+					: "\n\nNo relevant environment variables found in process.env";
+
 			throw new Error(
-				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.`,
+				`❌ Environment validation failed:\n${missingVars.join("\n")}${debugInfo}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.\n\nFor Railway: Ensure variables are set at the SERVICE level (not just project level) for the worker service.`,
 			);
 		}
 		throw error;

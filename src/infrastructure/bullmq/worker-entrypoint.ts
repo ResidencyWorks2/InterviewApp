@@ -96,6 +96,44 @@ if (isDevelopment || existsSync(envFilePath)) {
 	console.log(`[worker-entrypoint] Skipping .env.local load (production mode)`);
 }
 
+// Debug: Log available environment variables in production
+if (!isDevelopment) {
+	const relevantKeys = Object.keys(process.env)
+		.filter(
+			(key) =>
+				key.includes("SUPABASE") ||
+				key.includes("REDIS") ||
+				key.includes("OPENAI") ||
+				key.includes("POSTHOG") ||
+				key.includes("SENTRY") ||
+				key === "NODE_ENV" ||
+				key === "RAILWAY",
+		)
+		.sort();
+
+	console.log(
+		`[worker-entrypoint] Production mode - checking environment variables...`,
+	);
+	console.log(
+		`[worker-entrypoint] Relevant env vars found: ${relevantKeys.length > 0 ? relevantKeys.join(", ") : "NONE"}`,
+	);
+
+	// Check specifically for required vars
+	const requiredVars = {
+		NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL
+			? "SET"
+			: "MISSING",
+		NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+			? "SET"
+			: "MISSING",
+		SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY
+			? "SET"
+			: "MISSING",
+	};
+
+	console.log(`[worker-entrypoint] Required variables status:`, requiredVars);
+}
+
 // Use dynamic import to ensure env loading completes before worker imports
 // This prevents ESM hoisting from causing issues
 // Wrapped in IIFE to avoid top-level await linting issues
