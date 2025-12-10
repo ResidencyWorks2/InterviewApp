@@ -10,6 +10,8 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/components/ui/toast";
 import { cn } from "@/shared/utils";
 
 export interface ChecklistItem {
@@ -31,8 +33,20 @@ export interface ChecklistModalProps {
 }
 
 /**
- * ChecklistModal - Displays micro-checklist coaching items for a category
- * Users can check off items they've practiced/improved
+ * ChecklistModal Component
+ *
+ * Displays a modal with coaching checklist items for a specific category.
+ * Features:
+ * - Fetches checklist items from API when modal opens
+ * - Shows skeleton loaders while loading
+ * - Displays progress indicator (X / Y completed)
+ * - Supports optimistic UI updates with error rollback
+ * - Shows toast notifications for errors with retry option
+ * - Handles authentication expiration gracefully
+ * - Supports long text with automatic wrapping and scrolling
+ *
+ * @param props - ChecklistModalProps
+ * @returns React component
  */
 export function ChecklistModal({
 	open,
@@ -47,6 +61,7 @@ export function ChecklistModal({
 		React.useState<ChecklistItem[]>(items);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | null>(null);
+	const { toast } = useToast();
 
 	// Fetch checklist items when modal opens
 	const fetchChecklistItems = React.useCallback(async () => {
@@ -64,19 +79,39 @@ export function ChecklistModal({
 			);
 
 			if (!response.ok) {
+				// Handle authentication expiration
+				if (response.status === 401) {
+					const data = await response.json().catch(() => ({}));
+					const message =
+						data.error || "Your session has expired. Please sign in again.";
+					throw new Error(message);
+				}
 				throw new Error("Failed to fetch checklist items");
 			}
 
-			const data = await response.json();
-			console.log("✅ Checklist API response:", data);
-			setChecklistItems(data.items || []);
+			const responseData = await response.json();
+			console.log("✅ Checklist API response:", responseData);
+			// API response is wrapped in { data: { items: [...] }, message, timestamp }
+			const items = responseData.data?.items || responseData.items || [];
+			setChecklistItems(items);
 		} catch (err) {
 			console.error("❌ Error fetching checklist:", err);
-			setError(err instanceof Error ? err.message : "Failed to load checklist");
+			const errorMessage =
+				err instanceof Error ? err.message : "Failed to load checklist";
+			setError(errorMessage);
+			toast({
+				title: "Failed to load checklist",
+				description: errorMessage,
+				variant: "destructive",
+				action: {
+					label: "Retry",
+					onClick: () => fetchChecklistItems(),
+				},
+			});
 		} finally {
 			setLoading(false);
 		}
-	}, [category, evaluationId]);
+	}, [category, evaluationId, toast]);
 
 	React.useEffect(() => {
 		if (open && evaluationId) {
@@ -109,6 +144,21 @@ export function ChecklistModal({
 			});
 
 			if (!response.ok) {
+				// Handle authentication expiration
+				if (response.status === 401) {
+					const data = await response.json().catch(() => ({}));
+					const message =
+						data.error || "Your session has expired. Please sign in again.";
+					throw new Error(message);
+				}
+				// Handle rate limit specifically
+				if (response.status === 429) {
+					const data = await response.json().catch(() => ({}));
+					const retryAfter = data.retry_after || 60;
+					throw new Error(
+						`Rate limit exceeded. Please try again in ${retryAfter} seconds.`,
+					);
+				}
 				throw new Error("Failed to save checklist state");
 			}
 
@@ -124,6 +174,19 @@ export function ChecklistModal({
 						: item,
 				),
 			);
+
+			// Show toast notification with retry option
+			const errorMessage =
+				err instanceof Error ? err.message : "Failed to save checklist state";
+			toast({
+				title: "Failed to save",
+				description: errorMessage,
+				variant: "destructive",
+				action: {
+					label: "Retry",
+					onClick: () => toggleItem(itemId, currentlyCompleted),
+				},
+			});
 		}
 	};
 
@@ -169,10 +232,7 @@ export function ChecklistModal({
 					{loading ? (
 						<div className="space-y-3">
 							{[1, 2, 3, 4].map((i) => (
-								<div
-									key={i}
-									className="h-12 bg-muted rounded-md animate-pulse"
-								/>
+								<Skeleton key={i} className="h-12 w-full" />
 							))}
 						</div>
 					) : error ? (

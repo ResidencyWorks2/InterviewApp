@@ -45,6 +45,7 @@ describe("PHI Scrubbing Integration Tests: /api/evaluations", () => {
 
 	it("should scrub email addresses from response_text before database insert", async () => {
 		const requestBody = {
+			question_id: "test-question-id-001",
 			response_text: "Contact me at john.doe@example.com for more information",
 			response_type: "text" as const,
 			categories: { communication: 85 },
@@ -73,6 +74,7 @@ describe("PHI Scrubbing Integration Tests: /api/evaluations", () => {
 
 	it("should scrub phone numbers from response_text before database insert", async () => {
 		const requestBody = {
+			question_id: "test-question-id-002",
 			response_text: "Call me at (555) 123-4567 or 555-987-6543",
 			response_type: "text" as const,
 			categories: { communication: 85 },
@@ -103,6 +105,7 @@ describe("PHI Scrubbing Integration Tests: /api/evaluations", () => {
 
 	it("should scrub both email and phone from response_text", async () => {
 		const requestBody = {
+			question_id: "test-question-id-003",
 			response_text:
 				"Contact john@example.com or call 555-123-4567 for details",
 			response_type: "text" as const,
@@ -136,6 +139,7 @@ describe("PHI Scrubbing Integration Tests: /api/evaluations", () => {
 		const originalText =
 			"This is normal text without any sensitive information";
 		const requestBody = {
+			question_id: "test-question-id-004",
 			response_text: originalText,
 			response_type: "text" as const,
 			categories: { communication: 85 },

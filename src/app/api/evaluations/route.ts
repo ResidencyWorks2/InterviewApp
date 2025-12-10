@@ -96,13 +96,13 @@ export async function POST(request: NextRequest) {
 		});
 
 		if (!result.success) {
-			return NextResponse.json(
-				{
-					error: "DB_ERROR",
-					message: result.error || "Failed to save evaluation",
-				},
-				{ status: 500 },
-			);
+			const errorResponse = {
+				error: "DB_ERROR",
+				message: result.error || "Failed to save evaluation",
+				details: result.error ? { dbError: result.error } : undefined,
+			};
+			console.error("/api/evaluations POST - Database error:", errorResponse);
+			return NextResponse.json(errorResponse, { status: 500 });
 		}
 
 		return NextResponse.json(
@@ -113,9 +113,22 @@ export async function POST(request: NextRequest) {
 			{ status: 201 },
 		);
 	} catch (error) {
-		console.error("/api/evaluations POST error", error);
+		const errorMessage =
+			error instanceof Error ? error.message : "Unexpected error";
+		const errorStack = error instanceof Error ? error.stack : undefined;
+		console.error("/api/evaluations POST error:", {
+			message: errorMessage,
+			stack: errorStack,
+			errorType: error instanceof Error ? error.constructor.name : typeof error,
+		});
 		return NextResponse.json(
-			{ error: "INTERNAL_SERVER_ERROR", message: "Unexpected error" },
+			{
+				error: "INTERNAL_SERVER_ERROR",
+				message: errorMessage,
+				...(process.env.NODE_ENV === "development" && errorStack
+					? { details: { stack: errorStack } }
+					: {}),
+			},
 			{ status: 500 },
 		);
 	}

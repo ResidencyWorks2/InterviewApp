@@ -8,8 +8,24 @@ import {
 
 /**
  * GET /api/checklist/export?evaluationId=<eval_id>
- * Export completed checklist items for a Playbook
- * Returns formatted text suitable for including in a Playbook export
+ *
+ * Exports completed checklist items for a Playbook document.
+ * Returns formatted markdown text with items grouped by category.
+ * Handles deactivated templates (completed items still appear in export).
+ *
+ * @param request - Next.js request object
+ * @param request.searchParams.evaluationId - UUID of the evaluation result
+ * @returns Success response with formatted markdown text and completion data
+ * @throws {Error} If authentication fails, evaluationId missing, or database error
+ *
+ * @example
+ * GET /api/checklist/export?evaluationId=123e4567-e89b-12d3-a456-426614174000
+ *
+ * Response includes:
+ * - formattedText: Markdown-formatted text with completed items grouped by category
+ * - completions: Object mapping categories to completed items
+ * - totalCompleted: Total number of completed items
+ * - categoriesCount: Number of categories with completed items
  */
 export async function GET(request: NextRequest) {
 	try {

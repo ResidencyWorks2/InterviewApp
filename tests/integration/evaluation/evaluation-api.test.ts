@@ -21,7 +21,7 @@ vi.mock("ioredis", () => {
 // Mock BullMQ Queue to prevent Redis connection
 vi.mock("bullmq", () => {
 	class MockQueueEvents {
-		constructor(name: string, opts: any) {
+		constructor(name: string, opts: unknown) {
 			console.log("QueueEvents constructor called with:", name, opts);
 		}
 		async close() {
