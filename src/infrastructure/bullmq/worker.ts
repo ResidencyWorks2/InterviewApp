@@ -35,7 +35,10 @@ if (sentryEnabled && !_sentryClient) {
 		dsn: process.env.SENTRY_DSN,
 		environment:
 			process.env.SENTRY_ENV ?? process.env.NODE_ENV ?? "development",
-		release: process.env.SENTRY_RELEASE ?? process.env.VERCEL_GIT_COMMIT_SHA,
+		release:
+			process.env.SENTRY_RELEASE ??
+			process.env.RAILWAY_GIT_COMMIT_SHA ??
+			process.env.RAILWAY_DEPLOYMENT_ID,
 		tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? "0.05"),
 	});
 	sentryExtended.configureScope?.((scope) =>

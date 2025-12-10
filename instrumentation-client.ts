@@ -96,8 +96,8 @@ Sentry.init({
 	// Configure which URLs to trace
 	tracePropagationTargets: [
 		"localhost",
-		/^https:\/\/.*\.vercel\.app\/api/,
-		/^https:\/\/.*\\.supabase\\.co/,
+		/^https:\/\/.*\.railway\.app\/api/,
+		/^https:\/\/.*\.supabase\.co/,
 	],
 
 	// Adjust this value in production, or use tracesSampler for greater control

@@ -7,7 +7,7 @@ import { z } from "zod";
 
 /**
  * Helper to create an optional URL field that handles empty strings and invalid values gracefully.
- * This is needed because environment variables from Vercel or other platforms may be set to empty strings,
+ * This is needed because environment variables from deployment platforms may be set to empty strings,
  * and Zod's `.optional()` only handles `undefined`, not empty strings.
  *
  * Also handles common placeholder values like "undefined", "null", or whitespace-only strings.
@@ -35,13 +35,13 @@ const optionalUrl = () => {
 			}
 
 			// Validate URL format - if invalid, treat as undefined to allow build to continue
-			// This handles cases where Vercel might have an invalid URL value set
+			// This handles cases where deployment platforms might have an invalid URL value set
 			try {
 				new URL(trimmed);
 				return trimmed;
 			} catch {
 				// Invalid URL format - treat as undefined to prevent build failure
-				// The application will fall back to VERCEL_URL or other defaults
+				// The application will fall back to NEXT_PUBLIC_APP_URL or other defaults
 				return undefined;
 			}
 		},
@@ -99,14 +99,17 @@ const envSchema = z.object({
 		.min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
 	SUPABASE_ANON_KEY: z.string().optional(),
 
-	// Redis (Upstash)
+	// Redis (Upstash or Railway Redis)
 	UPSTASH_REDIS_NATIVE_URL: optionalUrl(),
 	UPSTASH_REDIS_REST_URL: optionalUrl(),
 	UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
-	// Deployment
-	VERCEL_URL: z.string().optional(),
-	VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+	// Railway provides these automatically when Redis/Postgres services are added
+	REDIS_URL: optionalUrl(),
+	DATABASE_URL: optionalUrl(),
+
+	// Deployment platform (Railway provides PORT automatically)
+	PORT: z.coerce.number().optional(),
 });
 
 // Parse and validate environment variables
@@ -125,7 +128,7 @@ function validateEnv() {
 				(err) => `${err.path.join(".")}: ${err.message}`,
 			);
 			throw new Error(
-				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Vercel environment variables for deployment) and ensure all required variables are set correctly.`,
+				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.`,
 			);
 		}
 		throw error;
@@ -154,13 +157,15 @@ export const hasSupabaseServiceRole = !!env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Helper function to get the correct app URL
 export const getAppUrl = (): string => {
-	// Priority order: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost fallback
+	// Priority order: NEXT_PUBLIC_APP_URL > Railway public domain > localhost fallback
 	if (env.NEXT_PUBLIC_APP_URL) {
 		return env.NEXT_PUBLIC_APP_URL;
 	}
 
-	if (env.VERCEL_URL) {
-		return `https://${env.VERCEL_URL}`;
+	// Railway provides RAILWAY_PUBLIC_DOMAIN automatically for public services
+	// Check for Railway environment variable
+	if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+		return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
 	}
 
 	// Fallback to localhost for development

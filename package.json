@@ -27,7 +27,6 @@
 		"@types/fs-extra": "^11.0.4",
 		"@types/glob": "^9.0.0",
 		"@upstash/redis": "^1.35.7",
-		"@vercel/otel": "^2.1.0",
 		"bullmq": "^5.65.1",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

@@ -2,6 +2,10 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	// Enable standalone output for Docker/Railway deployment
+	// This creates a minimal .next/standalone directory with only necessary files
+	output: "standalone",
+
 	// External packages for server-side rendering
 	serverExternalPackages: ["@supabase/ssr", "bullmq", "ioredis"],
 	transpilePackages: ["import-in-the-middle", "require-in-the-middle"],
@@ -64,11 +68,9 @@ const nextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-	// Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
-	// See the following for more information:
-	// https://docs.sentry.io/product/crons/
-	// https://vercel.com/docs/cron-jobs
-	automaticVercelMonitors: true,
+	// Note: automaticVercelMonitors removed - not compatible with Railway deployment
+	// For cron monitoring on Railway, use Railway's scheduled tasks or manual Sentry cron setup
+	// See: https://docs.sentry.io/product/crons/
 
 	// Automatically tree-shake Sentry logger statements to reduce bundle size
 	disableLogger: true,

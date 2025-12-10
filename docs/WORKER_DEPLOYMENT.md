@@ -1,22 +1,25 @@
 # BullMQ Worker Deployment Guide
 
-This guide explains how to deploy the BullMQ evaluation worker to a separate platform while keeping your Next.js app on Vercel.
+This guide explains how to deploy the BullMQ evaluation worker on Railway alongside the Next.js app.
 
 ## Architecture Overview
 
-- **Next.js App**: Deployed on Vercel (handles web requests, enqueues jobs)
-- **BullMQ Worker**: Deployed on Railway/Render/Fly.io (processes evaluation jobs)
-- **Redis Queue**: Upstash Redis (shared between app and worker)
-- **Database**: Supabase (shared between app and worker)
+- **Next.js App**: Deployed on Railway (handles web requests, enqueues jobs)
+- **BullMQ Worker**: Deployed on Railway (processes evaluation jobs)
+- **Redis Queue**: Railway Redis or Upstash Redis (shared between app and worker)
+- **Database**: Supabase or Railway Postgres (shared between app and worker)
 
 ## Prerequisites
 
-1. Your Next.js app deployed on Vercel
-2. Upstash Redis instance (for job queue)
-3. Supabase project (for data persistence)
-4. OpenAI API key
-5. Sentry DSN (optional, for error tracking)
-6. PostHog API key (optional, for analytics)
+1. Railway account and project
+2. Next.js app service configured in Railway
+3. Redis instance (Railway Redis or Upstash)
+4. Supabase project (or Railway Postgres)
+5. OpenAI API key
+6. Sentry DSN (optional, for error tracking)
+7. PostHog API key (optional, for analytics)
+
+**Note:** See [RAILWAY_MIGRATION.md](./RAILWAY_MIGRATION.md) for complete migration guide from Vercel.
 
 ## Option 1: Deploy to Railway (Recommended)
 

@@ -16,11 +16,15 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
 FROM base AS deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
+# Note: Cache mounts removed for Railway compatibility
+# Railway requires cache mount IDs in format: id=s/<service-id>-<path>
+# Since service ID isn't available at build time, we skip caching for Railway
+RUN pnpm install --frozen-lockfile --prod
 
 # Build worker
 FROM base AS builder
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Note: Cache mounts removed for Railway compatibility
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
