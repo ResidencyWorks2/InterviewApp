@@ -1,16 +1,15 @@
 /**
  * Environment variable validation and configuration
  * Ensures all required environment variables are present and valid
+ *
+ * Note: This module does NOT load .env.local files. Environment variables should be:
+ * - Set in your shell/process for local development
+ * - Provided by Railway via process.env in production
+ * - For local development with .env.local, ensure variables are exported to your shell
+ *   or use a tool like `dotenv-cli` to run your commands
  */
 
-import { config } from "dotenv";
 import { z } from "zod";
-
-// Load .env.local only in development (Railway and other platforms inject env vars via process.env)
-// This ensures local development works with .env.local while production uses injected env vars
-if (process.env.NODE_ENV !== "production") {
-	config({ path: ".env.local" });
-}
 
 /**
  * Helper to create an optional URL field that handles empty strings and invalid values gracefully.
