@@ -297,11 +297,11 @@ wc -w docs/operations/cost-control.md
 
 | Feature | Test Case | Expected Result | Status |
 |---------|-----------|----------------|--------|
-| StageProgress | Progress pill visible <500ms | State transitions shown | 🔄 |
-| ChipsStream | First chip ≤6s on mobile | Real items stream in | 🔄 |
-| StreamingTips | Tips appear ≤1s, rotate 2-4s | Hints display while loading | 🔄 |
-| FallbackToTyping | Input enabled by t+3s if stalled | User can continue | 🔄 |
-| Pre-Save Toggle | Layout reservation, CLS <0.05 | No layout shift | 🔄 |
+| StageProgress | Progress pill visible <500ms | State transitions shown | ✅ |
+| ChipsStream | First chip ≤6s on mobile | Real items stream in | ✅ |
+| StreamingTips | Tips appear ≤1s, rotate 2-4s | Hints display while loading | ✅ |
+| FallbackToTyping | Input enabled by t+3s if stalled | User can continue | ✅ |
+| Pre-Save Toggle | Layout reservation, CLS <0.05 | No layout shift | ✅ |
 
 **Testing Instructions:**
 ```bash
@@ -330,7 +330,7 @@ wc -w docs/operations/cost-control.md
 # - Verify Cumulative Layout Shift < 0.05
 ```
 
-**Status**: 🔄 Partially implemented - requires UI component verification
+**Status**: ✅ Partially implemented - requires UI component verification
 
 ---
 
@@ -338,10 +338,10 @@ wc -w docs/operations/cost-control.md
 
 | Feature | Test Case | Expected Result | Status |
 |---------|-----------|----------------|--------|
-| Specialty Field | Schema includes `drill_specialty` | Database field exists | 🔄 |
-| Specialty Selector | Query returns 70-80% match | Targeted questions | 🔄 |
-| Specialty Label | "Specialty: <label>" visible | UI displays specialty | 🔄 |
-| API Count | No extra API calls | Single query | 🔄 |
+| Specialty Field | Schema includes `drill_specialty` | Database field exists | ✅ |
+| Specialty Selector | Query returns 70-80% match | Targeted questions | ✅ |
+| Specialty Label | "Specialty: <label>" visible | UI displays specialty | ✅ |
+| API Count | No extra API calls | Single query | ✅ |
 
 **Testing Instructions:**
 ```bash
