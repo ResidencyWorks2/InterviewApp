@@ -37,6 +37,21 @@ interface Evaluation {
 	}>;
 }
 
+interface DrillStats {
+	totalAttempts: number;
+	bestScore: number;
+	averageScore: number;
+	worstScore: number;
+	totalTimeMinutes: number;
+	latestCompletion: string | null;
+	scoreTrend: string;
+	questionStats: Record<
+		string,
+		{ attempts: number; bestScore: number; averageScore: number }
+	>;
+	recentScores: number[];
+}
+
 export default function DrillPage() {
 	const { user, loading: authLoading } = useAuth();
 	const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -137,7 +152,7 @@ export default function DrillPage() {
 		const fetchAllStats = async () => {
 			if (!user || authLoading || evaluations.length === 0) return;
 
-			const statsMap: Record<string, any> = {};
+			const statsMap: Record<string, DrillStats> = {};
 
 			await Promise.all(
 				evaluations.map(async (evaluation) => {

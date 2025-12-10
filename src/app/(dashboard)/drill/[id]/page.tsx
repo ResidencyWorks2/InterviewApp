@@ -22,6 +22,11 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+	ANALYTICS_EVENTS,
+	analytics,
+	initializeAnalytics,
+} from "@/features/notifications/application/analytics";
 import { useAuth, useEvaluationStream } from "@/hooks";
 import { useDrillProgress } from "@/hooks/useDrillProgress";
 
@@ -425,6 +430,44 @@ export default function DrillInterfacePage() {
 	const drillId = evaluationData?.id || "loading";
 	const drillProgressHook = useDrillProgress(drillId);
 	const totalQuestions = evaluationData?.totalQuestions || 0;
+
+	// Track specialty_cue_hit event when specialty badge is displayed (once per page view)
+	const specialtyTrackedRef = React.useRef(false);
+
+	// Reset tracking ref when question changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: questionId dependency needed to reset ref on question change
+	React.useEffect(() => {
+		specialtyTrackedRef.current = false;
+	}, [questionId]);
+
+	React.useEffect(() => {
+		// Initialize analytics if not already initialized
+		initializeAnalytics();
+
+		// Only track if:
+		// 1. Question data is loaded
+		// 2. Specialty exists and is not "general"
+		// 3. Not already tracked for this page view
+		if (
+			questionData &&
+			questionData.drill_specialty &&
+			questionData.drill_specialty !== "general" &&
+			!specialtyTrackedRef.current
+		) {
+			try {
+				analytics.track(ANALYTICS_EVENTS.SPECIALTY_CUE_HIT, {
+					specialty: questionData.drill_specialty,
+					drill_id: questionData.id,
+					user_id: user?.id || "anonymous",
+					timestamp: new Date().toISOString(),
+				});
+				specialtyTrackedRef.current = true;
+			} catch (error) {
+				// Analytics failures should not block user interactions
+				console.error("Failed to track specialty_cue_hit event:", error);
+			}
+		}
+	}, [questionData, user]);
 
 	// Use streaming hook for real-time feedback
 	const streamingFeedback = useEvaluationStream(

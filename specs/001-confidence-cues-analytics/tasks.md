@@ -26,11 +26,11 @@
 
 **Note**: Most infrastructure already exists. This phase focuses on verifying prerequisites and adding event constants.
 
-- [ ] T001 Verify existing analytics infrastructure (PostHogAnalyticsService) in `src/features/notifications/infrastructure/posthog/AnalyticsService.ts`
-- [ ] T002 Verify existing data scrubbing utilities (DataScrubber, AnalyticsValidator) in `src/shared/security/`
-- [ ] T003 [P] Add analytics event constants to `src/features/notifications/application/analytics.ts`: `SPECIALTY_CUE_HIT`, `CHECKLIST_OPENED`, `CHECKLIST_COMPLETED`, `PD_VERIFY_CLICKED`
-- [ ] T004 [P] Verify existing checklist modal component in `src/components/drill/ChecklistModal.tsx`
-- [ ] T005 [P] Verify existing specialty display in `src/app/(dashboard)/drill/[id]/page.tsx`
+- [x] T001 Verify existing analytics infrastructure (PostHogAnalyticsService) in `src/features/notifications/infrastructure/posthog/AnalyticsService.ts`
+- [x] T002 Verify existing data scrubbing utilities (DataScrubber, AnalyticsValidator) in `src/shared/security/`
+- [x] T003 [P] Add analytics event constants to `src/features/notifications/application/analytics.ts`: `SPECIALTY_CUE_HIT`, `CHECKLIST_OPENED`, `CHECKLIST_COMPLETED`, `PD_VERIFY_CLICKED`
+- [x] T004 [P] Verify existing checklist modal component in `src/components/drill/ChecklistModal.tsx`
+- [x] T005 [P] Verify existing specialty display in `src/app/(dashboard)/drill/[id]/page.tsx`
 
 ---
 
@@ -42,9 +42,9 @@
 
 **Note**: Most foundational infrastructure already exists. This phase verifies readiness.
 
-- [ ] T006 Verify PostHog configuration and API keys are set in environment variables
-- [ ] T007 Verify DataScrubber and AnalyticsValidator are properly configured and tested
-- [ ] T008 Verify authentication system provides anonymized user IDs for analytics
+- [x] T006 Verify PostHog configuration and API keys are set in environment variables
+- [x] T007 Verify DataScrubber and AnalyticsValidator are properly configured and tested
+- [x] T008 Verify authentication system provides anonymized user IDs for analytics
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -60,17 +60,17 @@
 
 **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T009 [P] [US1] Unit test for PrivacyCopy component in `tests/unit/components/privacy/PrivacyCopy.test.tsx` - test rendering, text display, responsive design
-- [ ] T010 [P] [US1] Unit test for PrivacyDataBadge component in `tests/unit/components/privacy/PrivacyDataBadge.test.tsx` - test rendering, click handling, link navigation, accessibility
+- [x] T009 [P] [US1] Unit test for PrivacyCopy component in `tests/unit/components/privacy/PrivacyCopy.test.tsx` - test rendering, text display, responsive design
+- [x] T010 [P] [US1] Unit test for PrivacyDataBadge component in `tests/unit/components/privacy/PrivacyDataBadge.test.tsx` - test rendering, click handling, link navigation, accessibility
 - [ ] T011 [P] [US1] E2E test for privacy indicators visibility in `tests/e2e/confidence-cues/privacy-indicators.spec.ts` - test visibility on dashboard and drill pages, click behavior, navigation
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create PrivacyCopy component in `src/components/privacy/PrivacyCopy.tsx` - display 2-3 lines of generic trust-building text, responsive design, accessible
-- [ ] T013 [P] [US1] Create PrivacyDataBadge component in `src/components/privacy/PrivacyDataBadge.tsx` - shield icon with "Privacy" text, clickable link to `/privacy` route with fallback, accessible, track `pd_verify_clicked` event on click
-- [ ] T014 [US1] Add privacy components to dashboard layout in `src/app/(dashboard)/layout.tsx` - add PrivacyCopy and PrivacyDataBadge to footer section
-- [ ] T015 [US1] Add privacy components to drill page in `src/app/(dashboard)/drill/[id]/page.tsx` - add PrivacyCopy and PrivacyDataBadge to footer or dedicated section
-- [ ] T016 [US1] Create `/privacy` route page in `src/app/privacy/page.tsx` (if route doesn't exist) - basic privacy information page with fallback handling
+- [x] T012 [P] [US1] Create PrivacyCopy component in `src/components/privacy/PrivacyCopy.tsx` - display 2-3 lines of generic trust-building text, responsive design, accessible
+- [x] T013 [P] [US1] Create PrivacyDataBadge component in `src/components/privacy/PrivacyDataBadge.tsx` - shield icon with "Privacy" text, clickable link to `/privacy` route with fallback, accessible, track `pd_verify_clicked` event on click
+- [x] T014 [US1] Add privacy components to dashboard layout in `src/app/(dashboard)/layout.tsx` - add PrivacyCopy and PrivacyDataBadge to footer section
+- [x] T015 [US1] Add privacy components to drill page in `src/app/(dashboard)/drill/[id]/page.tsx` - add PrivacyCopy and PrivacyDataBadge to footer or dedicated section
+- [x] T016 [US1] Create `/privacy` route page in `src/app/privacy/page.tsx` (if route doesn't exist) - basic privacy information page with fallback handling
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Privacy copy and PD badge visible on dashboard and drill pages, badge clickable and navigates correctly.
 
@@ -92,8 +92,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Add `specialty_cue_hit` event tracking to drill page in `src/app/(dashboard)/drill/[id]/page.tsx` - fire event when specialty badge is displayed on page load/view (once per page view), include anonymized user_id, drill_id, specialty name, timestamp
-- [ ] T021 [US2] Add error handling for specialty tracking in `src/app/(dashboard)/drill/[id]/page.tsx` - gracefully handle missing specialty field, null/undefined specialty, analytics service failures (non-blocking)
+- [x] T020 [US2] Add `specialty_cue_hit` event tracking to drill page in `src/app/(dashboard)/drill/[id]/page.tsx` - fire event when specialty badge is displayed on page load/view (once per page view), include anonymized user_id, drill_id, specialty name, timestamp
+- [x] T021 [US2] Add error handling for specialty tracking in `src/app/(dashboard)/drill/[id]/page.tsx` - gracefully handle missing specialty field, null/undefined specialty, analytics service failures (non-blocking)
 
 **Checkpoint**: At this point, User Story 2 should be fully functional and testable independently. Specialty events fire correctly on drill page load with specialty badge.
 
