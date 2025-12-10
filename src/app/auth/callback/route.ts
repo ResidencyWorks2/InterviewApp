@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/infrastructure/supabase/server";
+import { logger } from "@/infrastructure/logging/logger";
+import { createClient } from "@/infrastructure/supabase/proxy";
 
 /**
  * Authentication callback handler
@@ -8,41 +9,81 @@ import { createClient } from "@/infrastructure/supabase/server";
 export async function GET(request: NextRequest) {
 	const requestUrl = new URL(request.url);
 	const code = requestUrl.searchParams.get("code");
-	const next = requestUrl.searchParams.get("next") ?? "/login";
+	// Default to dashboard - proxy will handle profile completion redirects
+	const next = requestUrl.searchParams.get("next") ?? "/dashboard";
 
-	console.log("Auth callback - URL:", requestUrl.toString());
-	console.log("Auth callback - Code:", code ? "present" : "missing");
-	console.log("Auth callback - Next:", next);
-	console.log(
-		"Auth callback - All params:",
-		Object.fromEntries(requestUrl.searchParams),
-	);
+	logger.debug("Auth callback received", {
+		component: "auth-callback",
+		action: "callback-received",
+		metadata: {
+			url: requestUrl.toString(),
+			hasCode: !!code,
+			next,
+			params: Object.fromEntries(requestUrl.searchParams),
+		},
+	});
 
 	if (code) {
-		console.log("Auth callback - Creating Supabase client...");
-		const supabase = await createClient();
-		console.log("Auth callback - Supabase client created");
-
 		try {
-			console.log("Auth callback - Exchanging code for session...");
+			// Per Supabase SSR best practices: create redirect response FIRST,
+			// then pass it to Supabase client so cookies are set directly on the redirect response.
+			// The proxy will handle profile completion redirects, so we always redirect to
+			// the next param or dashboard.
+			const redirectPath = next;
+			const redirectResponse = NextResponse.redirect(
+				`${requestUrl.origin}${redirectPath}`,
+			);
+
+			// Create Supabase client with the redirect response
+			// This ensures cookies are set directly on the redirect response
+			const supabase = createClient(request, redirectResponse);
+
+			logger.debug("Exchanging code for session", {
+				component: "auth-callback",
+				action: "exchange-code",
+			});
+
 			const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
 			if (error) {
-				console.error("Auth callback error:", error);
+				logger.error("Auth callback error", error, {
+					component: "auth-callback",
+					action: "exchange-code",
+					metadata: { errorMessage: error.message },
+				});
 				return NextResponse.redirect(
 					`${requestUrl.origin}/login?error=${encodeURIComponent(error.message)}`,
 				);
 			}
 
-			console.log("Auth callback - Session exchanged successfully:", {
-				user: data.user?.id,
-				session: data.session ? "present" : "missing",
+			logger.info("Session exchanged successfully", {
+				component: "auth-callback",
+				action: "exchange-code",
+				userId: data.user?.id,
+				metadata: { hasSession: !!data.session },
 			});
 
-			// Successful authentication - redirect to intended destination
-			return NextResponse.redirect(`${requestUrl.origin}${next}`);
+			// Cookies have been set directly on redirectResponse by Supabase SSR
+			// The proxy middleware will handle profile completion redirects if needed
+			logger.debug("Redirecting after successful auth", {
+				component: "auth-callback",
+				action: "redirect",
+				userId: data.user?.id,
+				metadata: {
+					redirectPath,
+					cookieCount: redirectResponse.cookies.getAll().length,
+				},
+			});
+
+			// Return the redirect response with cookies already set by Supabase SSR
+			return redirectResponse;
 		} catch (error) {
-			console.error("Auth callback exception:", error);
+			const errorObj =
+				error instanceof Error ? error : new Error(String(error));
+			logger.error("Auth callback exception", errorObj, {
+				component: "auth-callback",
+				action: "callback-handler",
+			});
 			return NextResponse.redirect(
 				`${requestUrl.origin}/login?error=${encodeURIComponent("Authentication failed")}`,
 			);
@@ -50,6 +91,9 @@ export async function GET(request: NextRequest) {
 	}
 
 	// No code parameter - redirect to login
-	console.log("Auth callback - No code parameter, redirecting to login");
+	logger.warn("Auth callback - No code parameter", {
+		component: "auth-callback",
+		action: "missing-code",
+	});
 	return NextResponse.redirect(`${requestUrl.origin}/login`);
 }

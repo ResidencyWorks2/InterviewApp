@@ -1,6 +1,6 @@
 ---
 description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
-handoffs: 
+handoffs:
   - label: Analyze For Consistency
     agent: speckit.analyze
     prompt: Run a project analysis for consistency
@@ -86,7 +86,7 @@ Every task MUST strictly follow this format:
 4. **[Story] label**: REQUIRED for user story phase tasks only
    - Format: [US1], [US2], [US3], etc. (maps to user stories from spec.md)
    - Setup phase: NO story label
-   - Foundational phase: NO story label  
+   - Foundational phase: NO story label
    - User Story phases: MUST have story label
    - Polish phase: NO story label
 5. **Description**: Clear action with exact file path
@@ -94,7 +94,7 @@ Every task MUST strictly follow this format:
 **Examples**:
 
 - ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
-- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py`
+- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/proxy/auth.py`
 - ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py`
 - ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
 - ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)

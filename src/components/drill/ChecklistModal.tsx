@@ -76,11 +76,6 @@ export function ChecklistModal({
 		setLoading(true);
 		setError(null);
 
-		console.log("🔍 Fetching checklist for:", {
-			category,
-			evaluationId,
-		});
-
 		try {
 			const response = await fetch(
 				`/api/checklist?category=${encodeURIComponent(category)}&evaluationId=${evaluationId}`,
@@ -98,7 +93,6 @@ export function ChecklistModal({
 			}
 
 			const responseData = await response.json();
-			console.log("✅ Checklist API response:", responseData);
 			// API response is wrapped in { data: { items: [...] }, message, timestamp }
 			const items = responseData.data?.items || responseData.items || [];
 			setChecklistItems(items);

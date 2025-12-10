@@ -114,6 +114,31 @@ export async function proxy(request: NextRequest) {
 	console.log("Proxy - Is public route:", isPublic);
 
 	if (isPublic) {
+		// For public routes like /login, check if user is already authenticated
+		// If authenticated, redirect them away from login to dashboard
+		if (pathname === "/login" || pathname === "/signup") {
+			try {
+				const response = NextResponse.next();
+				const supabase = createClient(request, response);
+
+				const {
+					data: { user },
+					error: userError,
+				} = await supabase.auth.getUser();
+
+				if (!userError && user) {
+					console.log(
+						"Proxy - User already authenticated, redirecting from login to dashboard",
+					);
+					// User is authenticated, redirect to dashboard (proxy will handle profile completion)
+					return NextResponse.redirect(new URL("/dashboard", request.url));
+				}
+			} catch (error) {
+				console.error("Proxy - Error checking auth for login page:", error);
+				// If error checking auth, allow access to login page
+			}
+		}
+
 		console.log("Proxy - Allowing public route:", pathname);
 		return NextResponse.next();
 	}
