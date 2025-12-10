@@ -120,7 +120,7 @@
 		"lint": "biome check .",
 		"lint:boundaries": "biome lint src",
 		"lint:fix": "biome check --write .",
-		"prepare": "lefthook install",
+		"prepare": "test -d .git && lefthook install || echo 'Skipping lefthook install (not a git repository)'",
 		"setup": "bash .devcontainer/scripts/setup-dev.sh",
 		"start": "concurrently \"next start\" \"pnpm worker:start\" --names \"app,worker\" --prefix-colors \"cyan,magenta\"",
 		"test": "vitest",
