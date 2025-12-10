@@ -17,14 +17,22 @@ vi.mock("next/navigation", () => ({
 
 // Mock analytics service
 const mockTrack = vi.fn();
-vi.mock(
-	"@/features/notifications/infrastructure/posthog/AnalyticsService",
-	() => ({
-		PostHogAnalyticsService: vi.fn().mockImplementation(() => ({
-			track: mockTrack,
-		})),
-	}),
-);
+const mockInitializeAnalytics = vi.fn();
+vi.mock("@/features/notifications/application/analytics", () => ({
+	analytics: {
+		track: mockTrack,
+	},
+	initializeAnalytics: mockInitializeAnalytics,
+	ANALYTICS_EVENTS: {
+		PD_VERIFY_CLICKED: "pd_verify_clicked",
+	},
+}));
+
+// Mock useAuth
+const mockUser = { id: "user-123" };
+vi.mock("@/hooks/useAuth", () => ({
+	useAuth: () => ({ user: mockUser }),
+}));
 
 describe("PrivacyDataBadge", () => {
 	beforeEach(() => {
@@ -61,6 +69,34 @@ describe("PrivacyDataBadge", () => {
 		fireEvent.click(badge);
 
 		// Navigation should be handled by Next.js Link component
+		expect(badge).toBeInTheDocument();
+	});
+
+	it("should track pd_verify_clicked event on click", () => {
+		render(<PrivacyDataBadge />);
+
+		const badge = screen.getByRole("link", { name: /privacy/i });
+		fireEvent.click(badge);
+
+		// Verify analytics tracking was called
+		expect(mockInitializeAnalytics).toHaveBeenCalled();
+		expect(mockTrack).toHaveBeenCalledWith("pd_verify_clicked", {
+			user_id: "user-123",
+			timestamp: expect.any(String),
+		});
+	});
+
+	it("should handle analytics failures gracefully without blocking navigation", () => {
+		mockTrack.mockImplementation(() => {
+			throw new Error("Analytics error");
+		});
+
+		render(<PrivacyDataBadge />);
+
+		const badge = screen.getByRole("link", { name: /privacy/i });
+		// Should not throw error
+		expect(() => fireEvent.click(badge)).not.toThrow();
+		// Navigation should still work
 		expect(badge).toBeInTheDocument();
 	});
 

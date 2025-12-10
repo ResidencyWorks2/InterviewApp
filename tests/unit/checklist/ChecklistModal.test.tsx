@@ -3,7 +3,7 @@
  * Tests skeleton loader display, analytics events, and error handling
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChecklistModal } from "@/components/drill/ChecklistModal";
 
@@ -14,6 +14,26 @@ global.fetch = vi.fn();
 const mockToast = vi.fn();
 vi.mock("@/components/ui/toast", () => ({
 	useToast: () => ({ toast: mockToast }),
+}));
+
+// Mock analytics service
+const mockTrack = vi.fn();
+const mockInitializeAnalytics = vi.fn();
+vi.mock("@/features/notifications/application/analytics", () => ({
+	analytics: {
+		track: mockTrack,
+	},
+	initializeAnalytics: mockInitializeAnalytics,
+	ANALYTICS_EVENTS: {
+		CHECKLIST_OPENED: "checklist_opened",
+		CHECKLIST_COMPLETED: "checklist_completed",
+	},
+}));
+
+// Mock useAuth
+const mockUser = { id: "user-123" };
+vi.mock("@/hooks/useAuth", () => ({
+	useAuth: () => ({ user: mockUser }),
 }));
 
 describe("ChecklistModal", () => {
@@ -27,6 +47,8 @@ describe("ChecklistModal", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		(global.fetch as ReturnType<typeof vi.fn>).mockClear();
+		mockTrack.mockClear();
+		mockInitializeAnalytics.mockClear();
 	});
 
 	describe("Skeleton Loader Display", () => {
@@ -217,6 +239,117 @@ describe("ChecklistModal", () => {
 
 			await waitFor(() => {
 				expect(screen.getByText("1 / 2 completed")).toBeInTheDocument();
+			});
+		});
+	});
+
+	describe("Analytics Event Tracking", () => {
+		it("should track checklist_opened event when modal opens", async () => {
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+				ok: true,
+				json: async () => ({ items: [] }),
+			} as Response);
+
+			const { rerender } = render(
+				<ChecklistModal {...defaultProps} open={false} />,
+			);
+
+			// Modal should not track when closed
+			expect(mockTrack).not.toHaveBeenCalled();
+
+			// Open modal
+			rerender(<ChecklistModal {...defaultProps} open={true} />);
+
+			await waitFor(() => {
+				expect(mockInitializeAnalytics).toHaveBeenCalled();
+				expect(mockTrack).toHaveBeenCalledWith("checklist_opened", {
+					evaluation_id: "eval-123",
+					category: "Communication",
+					user_id: "user-123",
+					timestamp: expect.any(String),
+				});
+			});
+		});
+
+		it("should track checklist_completed event when all items are completed", async () => {
+			const mockItems = [
+				{
+					id: "item-1",
+					category: "Communication",
+					item_text: "Item 1",
+					display_order: 1,
+					is_completed: false,
+				},
+				{
+					id: "item-2",
+					category: "Communication",
+					item_text: "Item 2",
+					display_order: 2,
+					is_completed: false,
+				},
+			];
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+				ok: true,
+				json: async () => ({ items: mockItems }),
+			} as Response);
+
+			// Mock successful toggle API call
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ items: mockItems }),
+			} as Response);
+
+			render(<ChecklistModal {...defaultProps} />);
+
+			await waitFor(() => {
+				expect(screen.getByText("Item 1")).toBeInTheDocument();
+			});
+
+			// Complete first item
+			const item1 = screen.getByText("Item 1").closest("button");
+			if (item1) {
+				fireEvent.click(item1);
+			}
+
+			// Mock successful toggle for second item
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({}),
+			} as Response);
+
+			// Complete second item (should trigger checklist_completed)
+			const item2 = screen.getByText("Item 2").closest("button");
+			if (item2) {
+				fireEvent.click(item2);
+			}
+
+			await waitFor(() => {
+				expect(mockTrack).toHaveBeenCalledWith("checklist_completed", {
+					evaluation_id: "eval-123",
+					category: "Communication",
+					completion_count: 2,
+					user_id: "user-123",
+					timestamp: expect.any(String),
+				});
+			});
+		});
+
+		it("should handle analytics failures gracefully without blocking user interactions", async () => {
+			mockTrack.mockImplementation(() => {
+				throw new Error("Analytics error");
+			});
+
+			(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+				ok: true,
+				json: async () => ({ items: [] }),
+			} as Response);
+
+			// Should not throw error when opening modal
+			expect(() => render(<ChecklistModal {...defaultProps} />)).not.toThrow();
+
+			await waitFor(() => {
+				expect(screen.getByRole("dialog")).toBeInTheDocument();
 			});
 		});
 	});
