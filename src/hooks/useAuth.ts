@@ -60,6 +60,30 @@ export function useAuth() {
 					console.log("useAuth - No initial session");
 					setUser(null);
 					setLoading(false);
+				} else if (event === "USER_UPDATED" && session) {
+					// User profile was updated - use the updated user from session
+					console.log(
+						"useAuth - User updated - user:",
+						session.user
+							? {
+									id: session.user.id,
+									email: session.user.email,
+									fullName: session.user.user_metadata?.full_name,
+								}
+							: null,
+					);
+					setUser(session.user);
+					setLoading(false);
+				} else if (event === "TOKEN_REFRESHED" && session) {
+					// Token was refreshed - update user from session
+					console.log(
+						"useAuth - Token refreshed - user:",
+						session.user
+							? { id: session.user.id, email: session.user.email }
+							: null,
+					);
+					setUser(session.user);
+					setLoading(false);
 				} else {
 					// Other events, get user from auth
 					const {

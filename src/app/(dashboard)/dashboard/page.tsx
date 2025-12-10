@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { dashboardService } from "@/application/services/dashboardService";
+import { CompleteProfileModal } from "@/components/auth/CompleteProfileModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import { useUserPlan } from "@/hooks/useUserPlan";
 
 export default function DashboardPage() {
@@ -37,6 +39,10 @@ export default function DashboardPage() {
 	const isAdmin = user?.user_metadata?.role === "admin";
 	const dashboardData = useDashboardData(user);
 	const userPlanData = useUserPlan(user);
+	const profileCompletion = useProfileCompletion(user);
+
+	// State for profile completion modal
+	const [showProfileModal, setShowProfileModal] = useState(false);
 
 	// Redirect to login if not authenticated (safety check - layout also handles this)
 	useEffect(() => {
@@ -44,6 +50,25 @@ export default function DashboardPage() {
 			router.push("/login");
 		}
 	}, [user, authLoading, router]);
+
+	// Auto-open profile completion modal if profile is incomplete
+	useEffect(() => {
+		if (
+			!authLoading &&
+			!profileCompletion.loading &&
+			user &&
+			!profileCompletion.isComplete
+		) {
+			setShowProfileModal(true);
+		} else if (profileCompletion.isComplete) {
+			setShowProfileModal(false);
+		}
+	}, [
+		authLoading,
+		profileCompletion.loading,
+		profileCompletion.isComplete,
+		user,
+	]);
 
 	// Check for error messages from URL params
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -686,6 +711,22 @@ export default function DashboardPage() {
 						</Card>
 					)}
 			</div>
+
+			{/* Profile Completion Modal */}
+			<CompleteProfileModal
+				open={showProfileModal}
+				onOpenChange={setShowProfileModal}
+				user={user}
+				onSuccess={() => {
+					// Close modal after success - profileCompletion hook will detect completion
+					// and keep modal closed via useEffect
+					setShowProfileModal(false);
+					// Reload to refresh user state and profile completion status
+					setTimeout(() => {
+						window.location.reload();
+					}, 500);
+				}}
+			/>
 		</div>
 	);
 }

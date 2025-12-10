@@ -137,16 +137,32 @@ export class AuthService {
 		try {
 			const {
 				data: { user },
-				error,
+				error: updateError,
 			} = await this.supabase.auth.updateUser({
 				data: updates,
 			});
 
-			if (error) {
-				throw createAuthError(error.message, 400, error.message);
+			if (updateError) {
+				throw createAuthError(updateError.message, 400, updateError.message);
 			}
 
-			return user;
+			// Refresh the session to ensure we have the latest user data
+			// This triggers USER_UPDATED event and updates auth state
+			const {
+				data: { session: refreshedSession },
+				error: refreshError,
+			} = await this.supabase.auth.refreshSession();
+
+			if (refreshError) {
+				console.warn(
+					"Failed to refresh session after profile update:",
+					refreshError,
+				);
+				// Don't throw - the update succeeded, just session refresh failed
+			}
+
+			// Return the user from refreshed session if available, otherwise use the update response
+			return refreshedSession?.user ?? user;
 		} catch (error) {
 			if (error instanceof Error && "message" in error) {
 				throw createAuthError(error.message, 500, "UPDATE_PROFILE_ERROR");

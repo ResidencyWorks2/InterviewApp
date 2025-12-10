@@ -240,8 +240,13 @@ export async function proxy(request: NextRequest) {
 				userMetadata: user.user_metadata,
 			});
 
-			// If profile is incomplete and user is trying to access dashboard or other protected routes
-			if (!isProfileComplete && pathname !== "/complete-profile") {
+			// If profile is incomplete and user is trying to access protected routes (except dashboard)
+			// Dashboard is allowed so the modal can show there
+			if (
+				!isProfileComplete &&
+				pathname !== "/complete-profile" &&
+				pathname !== "/dashboard"
+			) {
 				console.log(
 					"Proxy - Profile incomplete, redirecting to complete-profile",
 				);
