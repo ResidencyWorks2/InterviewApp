@@ -3,7 +3,14 @@
  * Ensures all required environment variables are present and valid
  */
 
+import { config } from "dotenv";
 import { z } from "zod";
+
+// Load .env.local only in development (Railway and other platforms inject env vars via process.env)
+// This ensures local development works with .env.local while production uses injected env vars
+if (process.env.NODE_ENV !== "production") {
+	config({ path: ".env.local" });
+}
 
 /**
  * Helper to create an optional URL field that handles empty strings and invalid values gracefully.
@@ -115,6 +122,8 @@ const envSchema = z.object({
 // Parse and validate environment variables
 function validateEnv() {
 	try {
+		// In production (Railway), environment variables are injected directly into process.env
+		// No need to load .env.local files - they're already available
 		const parsed = envSchema.parse(process.env);
 		// Default SUPABASE_URL to NEXT_PUBLIC_SUPABASE_URL if not provided
 		// They are typically the same value, just one is public and one is server-side
@@ -124,11 +133,20 @@ function validateEnv() {
 		return parsed;
 	} catch (error) {
 		if (error instanceof z.ZodError) {
-			const missingVars = error.issues.map(
-				(err) => `${err.path.join(".")}: ${err.message}`,
-			);
+			const missingVars = error.issues.map((err) => {
+				const path = err.path.join(".");
+				const value = process.env[path];
+				return `${path}: ${err.message}${value !== undefined ? ` (current value: "${value}")` : " (not set)"}`;
+			});
+
+			// Provide helpful debugging info for Railway deployments
+			const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
+			const hint = isRailway
+				? "\n\n💡 Railway Tip: Ensure environment variables are set as 'Shared Variables' in your Railway project settings, or as service-specific variables attached to this worker service."
+				: "\n\n💡 Make sure all required environment variables are set in your deployment platform.";
+
 			throw new Error(
-				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.`,
+				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.${hint}`,
 			);
 		}
 		throw error;
