@@ -4,7 +4,7 @@
  * Bundles TypeScript worker into a single JavaScript file for production
  */
 
-import * as esbuild from "esbuild";
+import { build } from "esbuild";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
 
@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 const rootDir = resolve(__dirname, "..");
 
 try {
-	await esbuild.build({
+	await build({
 		entryPoints: ["src/infrastructure/bullmq/worker.ts"],
 		bundle: true,
 		platform: "node",

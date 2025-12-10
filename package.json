@@ -70,6 +70,7 @@
 		"autoprefixer": "^10.4.22",
 		"concurrently": "^9.2.1",
 		"jsdom": "^27.3.0",
+		"esbuild": "^0.27.1",
 		"lefthook": "^2.0.9",
 		"node-mocks-http": "^1.17.2",
 		"postcss": "^8.5.6",
