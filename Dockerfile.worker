@@ -19,7 +19,8 @@ FROM base AS deps
 # Note: Cache mounts removed for Railway compatibility
 # Railway requires cache mount IDs in format: id=s/<service-id>-<path>
 # Since service ID isn't available at build time, we skip caching for Railway
-RUN pnpm install --frozen-lockfile --prod
+# --ignore-scripts skips prepare script which requires lefthook (devDependency)
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Build worker
 FROM base AS builder

@@ -18,6 +18,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 FROM base AS deps
 # Note: Cache mounts removed for Railway compatibility
 # Railway requires cache mount IDs in format: id=s/<service-id>-<path>
+# Note: We don't use --ignore-scripts here because builder stage needs all dependencies
+# including devDependencies and their scripts (like TypeScript compilation)
 RUN pnpm install --frozen-lockfile
 
 # Build application
