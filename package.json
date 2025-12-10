@@ -107,7 +107,7 @@
 		"dev:all": "concurrently \"pnpm dev\" \"pnpm worker:dev\" --names \"app,worker\" --prefix-colors \"cyan,magenta\"",
 		"test:coverage": "tsx scripts/coverage-check.ts",
 		"test:sla": "tsx cli/evaluate-harness.ts",
-		"build:worker": "tsc -p tsconfig.worker.json",
+		"build:worker": "node scripts/build-worker.mjs",
 		"build": "next build && pnpm build:worker",
 		"check:all": "biome check . && tsc --noEmit",
 		"clean": "rm -rf .next dist build coverage test-results",

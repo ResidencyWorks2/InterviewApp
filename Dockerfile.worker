@@ -46,11 +46,8 @@ RUN adduser --system --uid 1001 worker
 
 # Copy necessary files from builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist/worker.js ./dist/worker.js
 COPY --from=builder /app/package.json ./package.json
-
-# Copy source files needed for worker runtime
-COPY --from=builder /app/src ./src
 
 USER worker
 
@@ -60,5 +57,5 @@ EXPOSE 3001
 # Set environment
 ENV NODE_ENV=production
 
-# Start the worker
-CMD ["node", "dist/infrastructure/bullmq/worker.js"]
+# Start the worker (bundled single file)
+CMD ["node", "dist/worker.js"]
