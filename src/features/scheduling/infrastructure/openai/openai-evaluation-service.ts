@@ -11,10 +11,48 @@ import type {
  * Handles AI-powered evaluation of interview responses
  */
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-	apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization: OpenAI client is created only when accessed
+// This prevents build-time errors when env vars aren't available
+let cachedOpenAIClient: OpenAI | null = null;
+
+/**
+ * Get or create the OpenAI client
+ * Lazy initialization to avoid requiring env vars at build time
+ */
+function getOpenAIClient(): OpenAI {
+	if (cachedOpenAIClient) {
+		return cachedOpenAIClient;
+	}
+
+	const apiKey = process.env.OPENAI_API_KEY;
+
+	// Check if we're in build phase
+	const isBuildPhase =
+		process.env.NEXT_PHASE === "phase-production-build" ||
+		process.env.NEXT_PHASE === "phase-development-build" ||
+		(typeof apiKey === "string" && apiKey.includes("${{"));
+
+	if (!apiKey) {
+		if (isBuildPhase) {
+			// During build, return a placeholder client that will fail gracefully if used
+			// This allows the build to complete
+			cachedOpenAIClient = new OpenAI({
+				apiKey: "placeholder-key",
+			});
+			return cachedOpenAIClient;
+		}
+
+		throw new Error(
+			"Missing credentials. Please pass an `apiKey`, or set the `OPENAI_API_KEY` environment variable.",
+		);
+	}
+
+	cachedOpenAIClient = new OpenAI({
+		apiKey,
+	});
+
+	return cachedOpenAIClient;
+}
 
 /**
  * Evaluation service using OpenAI
@@ -24,7 +62,9 @@ export class OpenAIEvaluationService {
 	private client: OpenAI;
 
 	constructor() {
-		this.client = openai;
+		// Lazy initialization: client is created when service is instantiated
+		// This still happens at runtime, but allows build to complete
+		this.client = getOpenAIClient();
 	}
 
 	/**
@@ -308,7 +348,8 @@ export const openaiEvaluation = new OpenAIEvaluationService();
  */
 export async function checkOpenAIHealth(): Promise<boolean> {
 	try {
-		await openai.models.list();
+		const client = getOpenAIClient();
+		await client.models.list();
 		return true;
 	} catch (error) {
 		console.error("OpenAI health check failed:", error);
