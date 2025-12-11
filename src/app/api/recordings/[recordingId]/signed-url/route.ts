@@ -9,14 +9,20 @@ import { createClient } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 import { generateSignedUrl } from "@/features/booking/infrastructure/storage/signed-url";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+/**
+ * Get Supabase client for route operations
+ * Lazy initialization to avoid requiring env vars at build time
+ */
+function getSupabaseClient() {
+	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-	throw new Error("Missing Supabase environment variables");
+	if (!supabaseUrl || !supabaseServiceKey) {
+		throw new Error("Missing Supabase environment variables");
+	}
+
+	return createClient(supabaseUrl, supabaseServiceKey);
 }
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * POST handler for generating signed URLs
@@ -45,6 +51,7 @@ export async function POST(
 		const userId = request.headers.get("x-user-id");
 
 		// Query recordings table to get storage path and verify ownership
+		const supabase = getSupabaseClient();
 		const { data: recording, error } = await supabase
 			.from("recordings")
 			.select("storage_path, user_id")

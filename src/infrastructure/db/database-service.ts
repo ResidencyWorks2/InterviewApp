@@ -26,10 +26,32 @@ import type {
  * Database service for client-side operations
  */
 export class DatabaseService implements DatabaseServiceInterface {
-	protected supabase: SupabaseClient;
+	protected _supabase: SupabaseClient | null = null;
+	protected supabaseClientFactory?: () => SupabaseClient;
 
 	constructor(supabase?: SupabaseClient) {
-		this.supabase = supabase || createClient();
+		if (supabase) {
+			this._supabase = supabase;
+		} else {
+			// Lazy initialization: defer client creation until first use
+			// This prevents build-time errors when env vars aren't available
+			this.supabaseClientFactory = () => createClient();
+		}
+	}
+
+	/**
+	 * Get or create the Supabase client (lazy initialization)
+	 * Lazy initialization to avoid requiring env vars at build time
+	 */
+	protected get supabase(): SupabaseClient {
+		if (!this._supabase) {
+			if (this.supabaseClientFactory) {
+				this._supabase = this.supabaseClientFactory();
+			} else {
+				throw new Error("Supabase client not initialized");
+			}
+		}
+		return this._supabase;
 	}
 
 	/**
@@ -361,7 +383,8 @@ export class DatabaseService implements DatabaseServiceInterface {
  */
 export class ServerDatabaseService extends DatabaseService {
 	async initialize() {
-		this.supabase = await createServerClient();
+		// Set the supabase client directly (bypassing lazy initialization)
+		this._supabase = await createServerClient();
 	}
 
 	/**

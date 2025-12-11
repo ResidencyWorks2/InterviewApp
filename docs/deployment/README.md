@@ -7,9 +7,9 @@ This guide covers deploying the Interview Drills application to production envir
 ## Prerequisites
 
 ### Required Services
-- **Vercel** (or similar hosting platform)
-- **Supabase** (database and authentication)
-- **Upstash Redis** (caching)
+- **Railway** (hosting platform for app and worker)
+- **Supabase** (database and authentication) - or Railway Postgres
+- **Redis** (Upstash or Railway Redis for job queue)
 - **OpenAI API** (evaluation)
 - **PostHog** (analytics)
 - **Sentry** (error monitoring)
@@ -47,26 +47,33 @@ NODE_ENV=production
 
 ## Deployment Steps
 
-### 1. Vercel Deployment
+### 1. Railway Deployment
 
-#### Using Vercel CLI
+**See [RAILWAY_MIGRATION.md](./RAILWAY_MIGRATION.md) for complete migration guide.**
+
+#### Quick Start
+1. Go to [railway.app](https://railway.app)
+2. Create new project from GitHub repo
+3. Add two services:
+   - **App Service**: Uses `Dockerfile` (auto-detected)
+   - **Worker Service**: Uses `Dockerfile.worker` (via `railway.json`)
+4. Configure environment variables (see migration guide)
+5. Railway will auto-deploy on push to main branch
+
+#### Railway CLI (Optional)
 ```bash
-# Install Vercel CLI
-npm i -g vercel
+# Install Railway CLI
+npm i -g @railway/cli
 
-# Login to Vercel
-vercel login
+# Login
+railway login
+
+# Link to project
+railway link
 
 # Deploy
-vercel --prod
+railway up
 ```
-
-#### Using Vercel Dashboard
-1. Connect your GitHub repository
-2. Configure environment variables
-3. Set build command: `pnpm build`
-4. Set output directory: `.next`
-5. Deploy
 
 ### 2. Database Setup
 

@@ -1,0 +1,15 @@
+# Dockerfile for Railway Cron Service
+# Lightweight service that calls cleanup endpoint on a schedule
+
+FROM curlimages/curl:latest
+
+# Set working directory
+WORKDIR /app
+
+# Railway Cron will call this script on schedule
+# The cleanup endpoint should be secured with an API key
+COPY railway/cron-cleanup.sh ./cron-cleanup.sh
+RUN chmod +x ./cron-cleanup.sh
+
+# Default command - Railway Cron will override this
+CMD ["/app/cron-cleanup.sh"]

@@ -7,19 +7,25 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-	throw new Error(
-		"Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
-	);
-}
-
-// Use service role key for admin operations
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
 const BUCKET_NAME = "drill-recordings";
+
+/**
+ * Get Supabase client for storage operations
+ * Lazy initialization to avoid requiring env vars at build time
+ */
+function getSupabaseClient() {
+	const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+	if (!supabaseUrl || !supabaseServiceKey) {
+		throw new Error(
+			"Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+		);
+	}
+
+	// Use service role key for admin operations
+	return createClient(supabaseUrl, supabaseServiceKey);
+}
 
 /**
  * Upload a file to Supabase storage
@@ -33,6 +39,7 @@ export async function uploadFile(
 	storagePath: string,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
+		const supabase = getSupabaseClient();
 		const { error } = await supabase.storage
 			.from(BUCKET_NAME)
 			.upload(storagePath, file, {
@@ -65,6 +72,7 @@ export async function getSignedUrl(
 	expiresIn: number = 900,
 ): Promise<{ url: string | null; error: string | null }> {
 	try {
+		const supabase = getSupabaseClient();
 		const { data, error } = await supabase.storage
 			.from(BUCKET_NAME)
 			.createSignedUrl(storagePath, expiresIn);
@@ -92,6 +100,7 @@ export async function deleteFile(
 	storagePath: string,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
+		const supabase = getSupabaseClient();
 		const { error } = await supabase.storage
 			.from(BUCKET_NAME)
 			.remove([storagePath]);
@@ -117,6 +126,7 @@ export async function deleteFile(
  */
 export async function fileExists(storagePath: string): Promise<boolean> {
 	try {
+		const supabase = getSupabaseClient();
 		const { data, error } = await supabase.storage
 			.from(BUCKET_NAME)
 			.list(storagePath.split("/").slice(0, -1).join("/"));

@@ -29,6 +29,15 @@ pnpm prepare
 pnpm dev
 ```
 
+### Deployment
+
+The application is deployed on **Railway** with the following services:
+- **App Service**: Next.js application (auto-detects `Dockerfile`)
+- **Worker Service**: BullMQ worker for background job processing (`Dockerfile.worker`)
+- **Cron Service** (Optional): Scheduled cleanup tasks (`Dockerfile.cron`)
+
+See [docs/deployment/RAILWAY_MIGRATION.md](./docs/deployment/RAILWAY_MIGRATION.md) for complete deployment guide.
+
 ### Environment Setup
 
 Copy and configure `.env.example`:

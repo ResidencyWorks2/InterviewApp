@@ -7,7 +7,7 @@ import { z } from "zod";
 
 /**
  * Helper to create an optional URL field that handles empty strings and invalid values gracefully.
- * This is needed because environment variables from Vercel or other platforms may be set to empty strings,
+ * This is needed because environment variables from deployment platforms may be set to empty strings,
  * and Zod's `.optional()` only handles `undefined`, not empty strings.
  *
  * Also handles common placeholder values like "undefined", "null", or whitespace-only strings.
@@ -35,13 +35,13 @@ const optionalUrl = () => {
 			}
 
 			// Validate URL format - if invalid, treat as undefined to allow build to continue
-			// This handles cases where Vercel might have an invalid URL value set
+			// This handles cases where deployment platforms might have an invalid URL value set
 			try {
 				new URL(trimmed);
 				return trimmed;
 			} catch {
 				// Invalid URL format - treat as undefined to prevent build failure
-				// The application will fall back to VERCEL_URL or other defaults
+				// The application will fall back to NEXT_PUBLIC_APP_URL or other defaults
 				return undefined;
 			}
 		},
@@ -99,18 +99,82 @@ const envSchema = z.object({
 		.min(1, "SUPABASE_SERVICE_ROLE_KEY is required"),
 	SUPABASE_ANON_KEY: z.string().optional(),
 
-	// Redis (Upstash)
+	// Redis (Upstash or Railway Redis)
 	UPSTASH_REDIS_NATIVE_URL: optionalUrl(),
 	UPSTASH_REDIS_REST_URL: optionalUrl(),
 	UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
-	// Deployment
-	VERCEL_URL: z.string().optional(),
-	VERCEL_ENV: z.enum(["development", "preview", "production"]).optional(),
+	// Railway provides these automatically when Redis/Postgres services are added
+	REDIS_URL: optionalUrl(),
+	DATABASE_URL: optionalUrl(),
+
+	// Deployment platform (Railway provides PORT automatically)
+	PORT: z.coerce.number().optional(),
 });
+
+/**
+ * Check if we're in Next.js build phase or if env vars contain unresolved templates
+ * During build, environment variables may not be fully resolved (e.g., Railway's ${{shared.VAR}} syntax)
+ * We should skip strict validation during build and only validate at runtime
+ */
+function isBuildPhase(): boolean {
+	// Check if env vars contain Railway template syntax (unresolved)
+	const hasUnresolvedTemplates = Object.values(process.env).some(
+		(val) => typeof val === "string" && val.includes("${{"),
+	);
+
+	// NEXT_PHASE is set by Next.js during build
+	const isNextBuild =
+		process.env.NEXT_PHASE === "phase-production-build" ||
+		process.env.NEXT_PHASE === "phase-development-build";
+
+	// If we detect unresolved templates or are in Next.js build phase, skip strict validation
+	return hasUnresolvedTemplates || isNextBuild;
+}
 
 // Parse and validate environment variables
 function validateEnv() {
+	// During build phase, use lenient validation to allow build to proceed
+	// Railway's ${{shared.VAR}} syntax doesn't resolve during Docker build
+	if (isBuildPhase()) {
+		try {
+			// Use safeParse which doesn't throw, and return partial env with defaults
+			const result = envSchema.safeParse(process.env);
+			if (result.success) {
+				const parsed = result.data;
+				// Default SUPABASE_URL to NEXT_PUBLIC_SUPABASE_URL if not provided
+				if (!parsed.SUPABASE_URL && parsed.NEXT_PUBLIC_SUPABASE_URL) {
+					parsed.SUPABASE_URL = parsed.NEXT_PUBLIC_SUPABASE_URL;
+				}
+				return parsed;
+			}
+			// If validation fails during build, return a minimal env object with defaults
+			// This allows the build to complete; validation will happen at runtime
+			console.warn(
+				"[environment] Build-time validation skipped - will validate at runtime",
+			);
+			return {
+				...process.env,
+				NODE_ENV:
+					(process.env.NODE_ENV as "development" | "production" | "test") ||
+					"production",
+				NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+				NEXT_PUBLIC_SUPABASE_ANON_KEY:
+					process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+				SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+			} as z.infer<typeof envSchema>;
+		} catch {
+			// Fallback: return minimal env during build
+			return {
+				...process.env,
+				NODE_ENV:
+					(process.env.NODE_ENV as "development" | "production" | "test") ||
+					"production",
+			} as z.infer<typeof envSchema>;
+		}
+	}
+
+	// At runtime, perform strict validation
 	try {
 		const parsed = envSchema.parse(process.env);
 		// Default SUPABASE_URL to NEXT_PUBLIC_SUPABASE_URL if not provided
@@ -124,16 +188,64 @@ function validateEnv() {
 			const missingVars = error.issues.map(
 				(err) => `${err.path.join(".")}: ${err.message}`,
 			);
+
+			// Debug: Log available environment variables (filtered for security)
+			const availableEnvKeys = Object.keys(process.env)
+				.filter(
+					(key) =>
+						key.includes("SUPABASE") ||
+						key.includes("REDIS") ||
+						key.includes("OPENAI") ||
+						key.includes("POSTHOG") ||
+						key.includes("SENTRY") ||
+						key === "NODE_ENV",
+				)
+				.sort();
+
+			const debugInfo =
+				availableEnvKeys.length > 0
+					? `\n\nAvailable environment variables (filtered): ${availableEnvKeys.join(", ")}`
+					: "\n\nNo relevant environment variables found in process.env";
+
 			throw new Error(
-				`❌ Environment validation failed:\n${missingVars.join("\n")}\n\nPlease check your environment variables (.env.local for local development, or Vercel environment variables for deployment) and ensure all required variables are set correctly.`,
+				`❌ Environment validation failed:\n${missingVars.join("\n")}${debugInfo}\n\nPlease check your environment variables (.env.local for local development, or Railway environment variables for deployment) and ensure all required variables are set correctly.\n\nFor Railway: Ensure variables are set at the SERVICE level (not just project level) for the worker service.`,
 			);
 		}
 		throw error;
 	}
 }
 
-// Export validated environment variables
-export const env = validateEnv();
+// Lazy initialization: validate only when accessed, not at module load
+let cachedEnv: z.infer<typeof envSchema> | null = null;
+
+/**
+ * Get validated environment variables
+ * Lazy initialization to avoid requiring env vars at build time
+ */
+function getEnv(): z.infer<typeof envSchema> {
+	if (!cachedEnv) {
+		cachedEnv = validateEnv();
+	}
+	return cachedEnv;
+}
+
+// Export validated environment variables (lazy getter)
+// Use a Proxy to maintain the same API while deferring validation
+export const env = new Proxy({} as z.infer<typeof envSchema>, {
+	get(_target, prop) {
+		return getEnv()[prop as keyof z.infer<typeof envSchema>];
+	},
+	ownKeys() {
+		return Object.keys(getEnv());
+	},
+	has(_target, prop) {
+		return prop in getEnv();
+	},
+	getOwnPropertyDescriptor(_target, prop) {
+		const env = getEnv();
+		return Object.getOwnPropertyDescriptor(env, prop);
+	},
+});
 
 // Type-safe environment variables
 export type Env = z.infer<typeof envSchema>;
@@ -154,13 +266,15 @@ export const hasSupabaseServiceRole = !!env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Helper function to get the correct app URL
 export const getAppUrl = (): string => {
-	// Priority order: NEXT_PUBLIC_APP_URL > VERCEL_URL > localhost fallback
+	// Priority order: NEXT_PUBLIC_APP_URL > Railway public domain > localhost fallback
 	if (env.NEXT_PUBLIC_APP_URL) {
 		return env.NEXT_PUBLIC_APP_URL;
 	}
 
-	if (env.VERCEL_URL) {
-		return `https://${env.VERCEL_URL}`;
+	// Railway provides RAILWAY_PUBLIC_DOMAIN automatically for public services
+	// Check for Railway environment variable
+	if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+		return `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`;
 	}
 
 	// Fallback to localhost for development

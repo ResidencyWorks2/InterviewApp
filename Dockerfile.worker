@@ -3,6 +3,9 @@
 
 FROM node:22-alpine AS base
 
+# Install git (required for lefthook postinstall script)
+RUN apk add --no-cache git
+
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -16,11 +19,16 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies
 FROM base AS deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
+# Note: Cache mounts removed for Railway compatibility
+# Railway requires cache mount IDs in format: id=s/<service-id>-<path>
+# Since service ID isn't available at build time, we skip caching for Railway
+# --ignore-scripts skips prepare script which requires lefthook (devDependency)
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Build worker
 FROM base AS builder
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+# Note: Cache mounts removed for Railway compatibility
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
@@ -38,11 +46,8 @@ RUN adduser --system --uid 1001 worker
 
 # Copy necessary files from builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/dist/worker.js ./dist/worker.js
 COPY --from=builder /app/package.json ./package.json
-
-# Copy source files needed for worker runtime
-COPY --from=builder /app/src ./src
 
 USER worker
 
@@ -52,5 +57,5 @@ EXPOSE 3001
 # Set environment
 ENV NODE_ENV=production
 
-# Start the worker
-CMD ["node", "dist/infrastructure/bullmq/worker.js"]
+# Start the worker (bundled single file)
+CMD ["node", "dist/worker.js"]

@@ -90,7 +90,7 @@
 		".specify/scripts/bash/": true,
 		".specify/scripts/powershell/": true
 	},
-	"biome.configurationPath": "${workspaceFolder}/biome.json",
+	"biome.configurationPath": "biome.json",
 	"biome.enabled": true,
 	"chat.mcp.serverSampling": {
 		"InterviewApp/.vscode/mcp.json: context7": {

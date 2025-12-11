@@ -27,15 +27,24 @@ let posthogClient: PostHog | null = null;
 
 /**
  * Create a Supabase client scoped to the current request (server-only)
+ * Lazy initialization to avoid requiring env vars at build time
  */
 export async function createSupabaseServerClient(): Promise<SupabaseServerClient> {
 	const cookieStore = await cookies();
+	const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
 	const anonKey =
 		env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
 		env.SUPABASE_ANON_KEY ||
 		env.SUPABASE_SERVICE_ROLE_KEY;
 
-	return createServerClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, anonKey, {
+	// Validate env vars are present (should be available at runtime)
+	if (!supabaseUrl || !anonKey) {
+		throw new Error(
+			"Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+		);
+	}
+
+	return createServerClient<Database>(supabaseUrl, anonKey, {
 		cookies: {
 			getAll() {
 				return cookieStore.getAll();
