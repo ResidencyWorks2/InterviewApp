@@ -1,4 +1,5 @@
 import type { Session } from "@supabase/supabase-js";
+import { getAppUrl } from "@/infrastructure/config/environment";
 import { createClient } from "@/infrastructure/supabase/client";
 import type { AuthUser } from "@/types/auth";
 import { createAuthError, isValidEmail } from "../auth-helpers";
@@ -21,11 +22,10 @@ export class AuthService {
 				throw createAuthError("Invalid email format", 400, "INVALID_EMAIL");
 			}
 
-			// Next.js client/server—both are fine as long as it's absolute
+			// Use window.location.origin for client-side, or getAppUrl() for server-side
+			// getAppUrl() automatically falls back to RAILWAY_PUBLIC_DOMAIN if NEXT_PUBLIC_APP_URL is not set
 			const origin =
-				typeof window !== "undefined"
-					? window.location.origin
-					: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+				typeof window !== "undefined" ? window.location.origin : getAppUrl();
 
 			const { error } = await this.supabase.auth.signInWithOtp({
 				email: request.email,

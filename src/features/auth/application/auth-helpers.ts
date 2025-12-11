@@ -1,4 +1,5 @@
 import type { AuthUser, Session } from "@supabase/supabase-js";
+import { getAppUrl } from "@/infrastructure/config/environment";
 import type { AuthError, UserProfile } from "./auth-types";
 
 /**
@@ -92,7 +93,9 @@ export function isValidEmail(email: string): boolean {
  * @returns Redirect URL
  */
 export function getAuthRedirectUrl(pathname: string): string {
-	const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+	// Use getAppUrl() which automatically falls back to RAILWAY_PUBLIC_DOMAIN
+	// if NEXT_PUBLIC_APP_URL is not set
+	const baseUrl = getAppUrl();
 	return `${baseUrl}${pathname}`;
 }
 

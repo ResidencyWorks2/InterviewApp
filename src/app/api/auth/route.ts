@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
+import { getAppUrl } from "@/infrastructure/config/environment";
 
 /**
  * Authentication API route handler
@@ -34,11 +35,9 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Email is required" }, { status: 400 });
 		}
 
-		// Next.js client/server—both are fine as long as it's absolute
-		const origin =
-			typeof window !== "undefined"
-				? window.location.origin
-				: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+		// Use getAppUrl() which automatically falls back to RAILWAY_PUBLIC_DOMAIN
+		// if NEXT_PUBLIC_APP_URL is not set
+		const origin = getAppUrl();
 
 		const { error } = await supabase.auth.signInWithOtp({
 			email,

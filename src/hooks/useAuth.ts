@@ -29,6 +29,26 @@ export function useAuth() {
 				session ? "session present" : "no session",
 			);
 
+			// Handle token refresh errors gracefully
+			// These can occur when the client tries to refresh before cookies are fully available
+			// after a magic link callback - we'll let the session establish naturally
+			if (event === "TOKEN_REFRESHED" && !session) {
+				// Token refresh failed - try to get the current session
+				try {
+					const {
+						data: { session: currentSession },
+					} = await supabase.auth.getSession();
+					if (currentSession && mounted) {
+						setUser(currentSession.user);
+						setLoading(false);
+						return;
+					}
+				} catch (error) {
+					// Ignore refresh errors - they're often transient after magic link callbacks
+					console.debug("Token refresh error (likely transient):", error);
+				}
+			}
+
 			if (mounted) {
 				if (event === "SIGNED_IN" && session) {
 					// User just signed in, use the session user directly
@@ -121,10 +141,9 @@ export function useAuth() {
 	 */
 	const signIn = async (email: string) => {
 		// Next.js client/server—both are fine as long as it's absolute
-		const origin =
-			typeof window !== "undefined"
-				? window.location.origin
-				: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+		// Since this is a client-side hook, window.location.origin is always available
+		// getAppUrl() would be used for server-side, but this hook only runs on the client
+		const origin = window.location.origin;
 
 		const { error } = await supabase.auth.signInWithOtp({
 			email,

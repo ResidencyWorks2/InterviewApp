@@ -48,6 +48,16 @@ export class AnalyticsService {
 			return;
 		}
 
+		// Check if PostHog is already initialized (e.g., by PostHogProvider)
+		// PostHogProvider from posthog-js/react initializes PostHog automatically
+		// We should reuse the existing instance instead of re-initializing
+		if ((posthog as any).__loaded || (posthog as any).__initialized) {
+			// PostHog is already initialized, just use the existing instance
+			this.posthog = posthog;
+			this.isInitialized = true;
+			return;
+		}
+
 		try {
 			posthog.init(posthogKey, {
 				...posthogConfig,
@@ -56,6 +66,15 @@ export class AnalyticsService {
 			this.posthog = posthog;
 			this.isInitialized = true;
 		} catch (error) {
+			// If PostHog is already initialized, that's fine - just use the existing instance
+			if (
+				error instanceof Error &&
+				error.message.includes("already initialized")
+			) {
+				this.posthog = posthog;
+				this.isInitialized = true;
+				return;
+			}
 			console.error("Failed to initialize PostHog:", error);
 		}
 	}

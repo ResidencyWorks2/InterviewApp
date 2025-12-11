@@ -108,6 +108,16 @@ const envSchema = z.object({
 	REDIS_URL: optionalUrl(),
 	DATABASE_URL: optionalUrl(),
 
+	// Railway deployment platform variables (automatically provided by Railway)
+	RAILWAY_PUBLIC_DOMAIN: z.string().optional(), // e.g., "example.up.railway.app"
+	RAILWAY_PRIVATE_DOMAIN: z.string().optional(),
+	RAILWAY_PROJECT_NAME: z.string().optional(),
+	RAILWAY_ENVIRONMENT_NAME: z.string().optional(),
+	RAILWAY_SERVICE_NAME: z.string().optional(),
+	RAILWAY_PROJECT_ID: z.string().optional(),
+	RAILWAY_ENVIRONMENT_ID: z.string().optional(),
+	RAILWAY_SERVICE_ID: z.string().optional(),
+
 	// Deployment platform (Railway provides PORT automatically)
 	PORT: z.coerce.number().optional(),
 });
