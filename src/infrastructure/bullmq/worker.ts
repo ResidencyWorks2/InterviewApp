@@ -10,7 +10,7 @@ import { evaluateTranscript } from "../openai/gpt_evaluator";
 import { transcribeAudio } from "../openai/whisper";
 import { captureEvent } from "../posthog";
 import { getByRequestId, upsertResult } from "../supabase/evaluation_store";
-import { connection, EVALUATION_QUEUE_NAME } from "./queue";
+import { EVALUATION_QUEUE_NAME, getConnectionForWorker } from "./queue";
 
 type ScopeLike = { setTag?: (key: string, value: string) => void };
 type FlushableClient = { flush?: (timeout?: number) => PromiseLike<void> };
@@ -93,7 +93,31 @@ const flushSentry = async () => {
 /**
  * BullMQ worker that processes evaluation jobs.
  * Handles transcription (if audio_url provided), GPT evaluation, validation, persistence, and analytics.
+ *
+ * Note: We explicitly initialize the connection here to ensure it's a real IORedis instance,
+ * not a Proxy, which can cause issues with BullMQ's internal method calls.
  */
+let redisConnection: ReturnType<typeof getConnectionForWorker>;
+
+try {
+	redisConnection = getConnectionForWorker();
+	logger.info("Redis connection initialized for worker", {
+		component: "evaluation-worker",
+		action: "connection-init",
+		metadata: {
+			connectionType: redisConnection.constructor.name,
+			status: redisConnection.status,
+		},
+	});
+} catch (error) {
+	const errorObj = error instanceof Error ? error : new Error(String(error));
+	logger.error("Failed to initialize Redis connection", errorObj, {
+		component: "evaluation-worker",
+		action: "connection-init-failed",
+	});
+	throw errorObj;
+}
+
 export const evaluationWorker = new Worker<EvaluationRequest>(
 	EVALUATION_QUEUE_NAME,
 	async (job: Job<EvaluationRequest>) => {
@@ -283,7 +307,7 @@ export const evaluationWorker = new Worker<EvaluationRequest>(
 		}
 	},
 	{
-		connection,
+		connection: redisConnection,
 		concurrency: 1, // Process one job at a time for simplicity
 	},
 );

@@ -34,11 +34,21 @@ export function createClient() {
 			);
 		}
 
-		// At runtime, if env vars are missing, return a placeholder client
-		// This prevents the app from crashing, but operations will fail gracefully
-		console.warn(
-			"Supabase client initialized without credentials. Some features may not work.",
+		// At runtime, if env vars are missing, throw a clear error
+		// This helps identify configuration issues early
+		const errorMessage =
+			"Missing required Supabase environment variables. " +
+			"Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set. " +
+			"These must be available at build time for Next.js to embed them in the client bundle.";
+
+		console.error(errorMessage);
+		console.error("NEXT_PUBLIC_SUPABASE_URL:", supabaseUrl ? "SET" : "MISSING");
+		console.error(
+			"NEXT_PUBLIC_SUPABASE_ANON_KEY:",
+			supabaseAnonKey ? "SET" : "MISSING",
 		);
+
+		// Still return a placeholder to prevent app crash, but log the error clearly
 		return createBrowserClient<Database>(
 			"https://placeholder.supabase.co",
 			"placeholder-key",
