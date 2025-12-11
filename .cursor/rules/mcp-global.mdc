@@ -12,28 +12,42 @@ Always use the blessed MCP for its domain unless the Constitution/Context7 plan 
 ## 2. Provider Playbooks
 
 ### Context7 (Specs & Quality Gates)
+- **MCP Server**: `context7` (via `@upstash/context7-mcp`)
 - Pull the latest spec/plan/tasks from Context7 before writing code.
-- Re-run required gates when a plan says to “STOP AND VALIDATE”.
+- Re-run required gates when a plan says to "STOP AND VALIDATE".
 - Any divergence from Context7 must be documented back into the active plan before implementation resumes.
+- Use Context7 MCP tools for library documentation, code generation, setup, and configuration steps.
 
 ### Supabase (Auth, Storage, Postgres)
+- **MCP Server**: `supabase` (via `https://mcp.supabase.com/mcp`)
 - Regenerate `src/types/database.types.ts` whenever the schema changes via `pnpm run update-types` or `pnpm run update-types:remote`.
 - Commit regenerated types in the same PR.
 - Only access Supabase through the typed clients in `src/lib/supabase/{client,server,proxy}.ts`.
+- Use Supabase MCP tools for database operations, migrations, and type generation.
 - Block merges if types are stale or client usage bypasses the typed helpers.
 
 ### PostHog (Product Analytics)
+- **MCP Server**: `posthog` (via `https://mcp.posthog.com/mcp`)
 - All events must pass through `DataScrubber` (PII-safe payloads) before calling PostHog.
 - `distinctId` must be anonymized; no emails or raw identifiers.
 - Required events (e.g., `content_pack_missing`) must fire exactly where specs demand.
 - Fail the build/review if analytics validation or scrubbing tests are missing.
 
+### Sentry (Error Tracking & Monitoring)
+- **MCP Server**: `Sentry` (via `mcp-remote@latest` → `https://mcp.sentry.dev/mcp`)
+- All error contexts must be scrubbed for PII before sending to Sentry.
+- Use Sentry MCP tools for error tracking configuration and monitoring setup.
+- Ensure error reporting follows the same PHI scrubbing standards as other external services.
+
 ### Sequential-Thinking Workflow
-- When a plan marks “Sequential Strategy (Recommended/Required)”, finish phases in order: Setup → Foundational → Story 1 → Story 2 → …
+- **MCP Server**: `sequential-thinking` (via `@modelcontextprotocol/server-sequential-thinking`)
+- When a plan marks "Sequential Strategy (Recommended/Required)", finish phases in order: Setup → Foundational → Story 1 → Story 2 → …
 - Do not parallelize tasks that the plan marks sequential without first updating the Context7 plan to reflect the change.
-- Treat sequential checkpoints (e.g., “STOP and VALIDATE”) as blocking quality gates.
+- Treat sequential checkpoints (e.g., "STOP and VALIDATE") as blocking quality gates.
+- Use Sequential-Thinking MCP tools for complex problem-solving and step-by-step analysis.
 
 ### Serena (Code Intelligence & Symbolic Editing)
+- **MCP Server**: `serena` (via `uvx` from `git+https://github.com/oraios/serena`)
 - Serena provides semantic code analysis and symbolic editing tools for efficient codebase navigation and modification.
 - **Project Management**: `activate_project`, `get_current_config`, `check_onboarding_performed`, `onboarding`
 - **File Operations**: `list_dir`, `find_file`, `read_file` (via standard tools), `read_memory`, `list_memories`, `write_memory`, `edit_memory`, `delete_memory`
@@ -44,11 +58,24 @@ Always use the blessed MCP for its domain unless the Constitution/Context7 plan 
 - **Workflow**: Prefer Serena's symbolic tools over reading entire files when exploring code. Use `get_symbols_overview` first, then read specific symbol bodies only when needed.
 - Serena tools are token-efficient and should be prioritized for code navigation and editing tasks.
 
+### Accessibility (A11y Color Contrast)
+- **MCP Server**: `accessibility` (via `a11y-color-contrast-mcp`)
+- Use Accessibility MCP tools for color contrast validation and accessibility checks.
+- Ensure all UI components meet WCAG contrast requirements before merging.
+
+### Railway (Deployment & Infrastructure)
+- **MCP Server**: `Railway` (via `@railway/mcp-server`)
+- Use Railway MCP tools for deployment operations, environment management, and infrastructure configuration.
+- Coordinate with Railway MCP for service deployments, environment variables, and monitoring.
+
 ## 3. Compliance Checklist (run before every PR)
 1. Context7 artifacts synced and gates passed.
 2. Supabase types regenerated (if schema touched) and clients used.
 3. PostHog events scrubbed + required telemetry covered by tests.
-4. Task order respects the latest sequential instructions.
-5. Serena tools used appropriately for code navigation and editing (prefer symbolic tools over full file reads).
+4. Sentry error contexts scrubbed for PII (if error tracking added/modified).
+5. Task order respects the latest sequential instructions.
+6. Serena tools used appropriately for code navigation and editing (prefer symbolic tools over full file reads).
+7. Accessibility checks passed (if UI changes made).
+8. Railway deployment configuration verified (if infrastructure changes made).
 
 Failure to satisfy any item blocks merge until resolved.

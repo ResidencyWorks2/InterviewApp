@@ -9,40 +9,49 @@ args: []
 You MUST:
 
 - Re-read this file at the start of every request so the workflow stays fresh.
-- Invoke the sequential thinking tool before any non-trivial decision, outlining the plan, unknowns, and verification steps.
+- **Constitution Compliance**: Follow `.specify/memory/constitution.md` principles (Code Quality, Architecture, Test-First Development, MCP Workflow).
+- **Sequential Thinking (MANDATORY)**: Invoke the `sequential-thinking` MCP server (`@modelcontextprotocol/server-sequential-thinking`) before any non-trivial decision, outlining the plan, unknowns, and verification steps. This is NON-NEGOTIABLE per Constitution IV.
 - Treat Spec Kit artifacts in `.specify` (constitution, specs, plans, tasks) as the source of truth for what to build and why.
-- Prefer Serena tools for all code discovery, symbol navigation, semantic edits, pattern searches, and project-specific memory operations; avoid brute-force full-file reads unless strictly required.
+- **Serena Tools (MANDATORY)**: Use `serena` MCP server (via `uvx` from `git+https://github.com/oraios/serena`) for all code discovery, symbol navigation, semantic edits, pattern searches, and project-specific memory operations. Full-file reads happen ONLY when Serena cannot retrieve necessary context. This is NON-NEGOTIABLE per Constitution IV.
 - Use Serena project memories (`list_memories`, `read_memory`, `write_memory`, `delete_memory`) to recall and persist durable InterviewApp knowledge such as architecture, Supabase workflow, Next.js 16 patterns, and security rules.
-- Use Context7 to pull up to date documentation for third-party dependencies and relevant MCP tools; cite the key findings in your reasoning.
-- When calling MCP tools, follow the spec: discover capabilities with `tools/list`, only issue schema-compliant `tools/call` requests, respect `execution.taskSupport`, and propagate `tool_use` and `tool_results` batches as required.
+- **Context7 (MANDATORY)**: Use `context7` MCP server (via `@upstash/context7-mcp`) to pull up-to-date documentation for third-party dependencies and relevant MCP tools; cite the key findings in your reasoning. This is NON-NEGOTIABLE per Constitution IV.
+- **MCP Tool Compliance**: When calling MCP tools, follow the spec: discover capabilities with `tools/list`, only issue schema-compliant `tools/call` requests, respect `execution.taskSupport`, and propagate `tool_use` and `tool_results` batches as required. Bubble up tool errors verbatim.
+- **MCP Server References**: Use the appropriate MCP server for each domain:
+  - `supabase` (via `https://mcp.supabase.com/mcp`) for database operations, migrations, type generation
+  - `posthog` (via `https://mcp.posthog.com/mcp`) for analytics (with PII scrubbing)
+  - `Sentry` (via `mcp-remote@latest` → `https://mcp.sentry.dev/mcp`) for error tracking (with PII scrubbing)
+  - `accessibility` (via `a11y-color-contrast-mcp`) for UI accessibility checks
+  - `Railway` (via `@railway/mcp-server`) for deployment operations
 - Surface uncertainties quickly and ask the user for clarification when requirements, constraints, or risk are ambiguous.
 
 # Steps
 
 1. **Kickoff and alignment**
 
-   - Run the sequential thinking tool and capture:
+   - **MANDATORY**: Invoke `sequential-thinking` MCP server and capture:
      - The concrete user goal for this session (for example: new feature in `scheduling`, bug fix in `auth`, change in `billing`, tweak to evaluation pipeline).
      - Known risks and unknowns.
      - The Serena, Spec Kit, Context7, and other MCP actions you expect to take.
+     - This is NON-NEGOTIABLE per Constitution IV.
    - Determine whether the work should be Spec Kit driven:
      - Use `/go.speckit` for new features, non-trivial refactors, or complex bug fixes that need explicit specs and plans.
      - Use `/go` for quick, well scoped tweaks.
-   - Load relevant Serena memories using `list_memories` and `read_memory`, especially:
+   - Load relevant Serena memories using Serena MCP `list_memories` and `read_memory`, especially:
      - Supabase workflow and migration rules.
      - Next.js 16 patterns and proxy behavior.
      - Any existing memory for this feature area or module.
 
 2. **Spec Kit phase 1: Constitution check**
 
-   - Look for `.specify/constitution.md`:
+   - Look for `.specify/memory/constitution.md`:
      - If it exists, skim it and restate the principles that matter for this task:
        - Onion architecture boundaries (domain, application, infrastructure, presentation).
        - DDD rules and feature slice isolation.
-       - Testing expectations and coverage.
+       - Testing expectations and coverage (≥80% unit + integration, TDD mandatory).
        - Security and PHI scrubbing rules.
-     - If it does not exist or is clearly missing important principles, plan to run `/speckit.constitution` with a prompt that reflects InterviewApp’s architecture and compliance needs.
-   - If the constitution adds new long lived principles that are not already captured in Serena memory, use `write_memory` to add a small number of named entries such as:
+       - MCP Workflow requirements (Sequential Thinking, Serena tools, Context7 lookups).
+     - If it does not exist or is clearly missing important principles, plan to run `/speckit.constitution` with a prompt that reflects InterviewApp's architecture and compliance needs.
+   - If the constitution adds new long lived principles that are not already captured in Serena memory, use Serena MCP `write_memory` to add a small number of named entries such as:
      - `IA: constitution highlights`
      - `IA: testing and coverage rules`
      - `IA: security and PHI scrubbing rules`
@@ -86,19 +95,24 @@ You MUST:
 6. **Implementation with Serena and MCP tools**
 
    - For each task:
-     - Use Serena discovery tools to locate and understand the relevant areas:
+     - **MANDATORY**: Use Serena MCP discovery tools to locate and understand the relevant areas (NON-NEGOTIABLE per Constitution IV):
        - `list_dir` to inspect module layout under `src/features`, `src/domain`, `src/application`, `src/infrastructure`, and `src/presentation`.
        - `get_symbols_overview` and `find_symbol` to identify key entities, services, handlers, and React components.
        - `find_referencing_symbols` and `find_referencing_code_snippets` to locate call sites and data flow.
-     - Use Context7 to:
+       - **Avoid full-file reads**: Only read entire files when Serena tools cannot provide necessary context.
+     - **MANDATORY**: Use Context7 MCP server to:
        - Confirm any unclear behavior for Next.js 16, Supabase client patterns, BullMQ, Sentry, and PostHog.
        - Check MCP tool schemas when using Supabase MCP or other infra-facing tools.
-     - Apply edits using Serena editing tools:
-       - `insert_at_line`, `replace_lines`, `replace_symbol_body`, `insert_before_symbol`, and `insert_after_symbol`.
+       - This is NON-NEGOTIABLE per Constitution IV.
+     - **MANDATORY**: Apply edits using Serena MCP editing tools:
+       - `replace_symbol_body`, `insert_after_symbol`, `insert_before_symbol`, `replace_content` (regex/literal).
+       - Full-file writes only when Serena cannot handle the edit.
      - Keep edits tightly scoped to the current task and aligned with the spec and plan.
+     - **Constitution Compliance**: Ensure all code passes Biome formatting/linting (Constitution I), follows Onion Architecture (Constitution II), and maintains TypeScript strict mode.
    - When invoking MCP tools:
      - Ensure payloads are schema compliant.
-     - Handle errors by reporting them and adjusting your approach or inputs.
+     - Handle errors by reporting them verbatim and adjusting your approach or inputs.
+     - Use appropriate MCP servers: Supabase for DB ops, PostHog for analytics (with scrubbing), Sentry for errors (with scrubbing).
 
 7. **Verification and tests**
 
@@ -113,17 +127,21 @@ You MUST:
 
 8. **Wrap up and memory updates**
 
-   - Use Serena’s `summarize_changes` to obtain a structured description of edits where appropriate.
+   - Use Serena MCP `summarize_changes` to obtain a structured description of edits where appropriate.
    - Cross check implementation versus:
      - The Spec Kit spec.
      - The plan.
      - The tasks list.
      - The onion architecture and feature module rules in `initial_prompt`.
-   - Update Serena memory via `write_memory` to reflect:
+     - Constitution compliance (Code Quality, Architecture, Test-First Development, MCP Workflow).
+   - Update Serena memory via Serena MCP `write_memory` to reflect:
      - New or changed architectural decisions.
      - Behavior changes that affect how interviews are scheduled, evaluated, or billed.
      - Important workflow updates (for example: changes to migration or type generation commands).
      - Any non-obvious security, PHI scrubbing, or compliance constraints clarified during the work.
+   - **MCP Compliance Report**: Explicitly reference which Serena/Context7/MCP steps were performed so reviewers can trace compliance (Constitution IV).
+   - **Accessibility Check**: If UI changes were made, use `accessibility` MCP server to verify WCAG contrast requirements before merging.
+   - **Deployment Check**: If infrastructure changes were made, coordinate with `Railway` MCP server for deployment verification.
    - Summarise the outcome for the user:
      - Reference the relevant Spec Kit files under `.specify` (constitution, spec, plan, tasks).
      - List the key files and symbols touched.

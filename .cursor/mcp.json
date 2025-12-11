@@ -55,6 +55,10 @@
 		"accessibility": {
 			"command": "npx",
 			"args": ["-y", "a11y-color-contrast-mcp"]
+		},
+		"Railway": {
+			"command": "npx",
+			"args": ["-y", "@railway/mcp-server"]
 		}
 	}
 }
