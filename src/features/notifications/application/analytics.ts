@@ -38,8 +38,18 @@ export class AnalyticsService {
 			return;
 		}
 
+		const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+
+		// Only initialize if we have a valid key
+		if (!posthogKey || posthogKey.trim() === "") {
+			console.warn(
+				"PostHog not initialized: NEXT_PUBLIC_POSTHOG_KEY is not set or is empty",
+			);
+			return;
+		}
+
 		try {
-			posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "", {
+			posthog.init(posthogKey, {
 				...posthogConfig,
 				person_profiles: "identified_only",
 			});

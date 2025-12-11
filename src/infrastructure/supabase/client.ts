@@ -34,8 +34,21 @@ export function createClient() {
 			);
 		}
 
-		throw new Error(
-			"Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+		// At runtime, if env vars are missing, return a placeholder client
+		// This prevents the app from crashing, but operations will fail gracefully
+		console.warn(
+			"Supabase client initialized without credentials. Some features may not work.",
+		);
+		return createBrowserClient<Database>(
+			"https://placeholder.supabase.co",
+			"placeholder-key",
+			{
+				auth: {
+					autoRefreshToken: true,
+					persistSession: true,
+					detectSessionInUrl: true,
+				},
+			},
 		);
 	}
 
