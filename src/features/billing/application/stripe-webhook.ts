@@ -36,9 +36,9 @@ export async function handleStripeWebhookRequest(
 		}
 
 		const stripe = new Stripe(env.STRIPE_SECRET_KEY ?? "", {
-  apiVersion: "2025-12-15.clover",
+  apiVersion: "2022-11-15",
 });
-,
+
 		});
 
 		const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
